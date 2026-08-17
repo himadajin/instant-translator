@@ -1,0 +1,88 @@
+.rail {
+  position: relative;
+  background: var(--color-hairline);
+  width: 1px;
+  height: 100%;
+  justify-self: center;
+}
+
+@media (max-width: 799.98px) {
+  .rail {
+    width: 100%;
+    height: 1px;
+  }
+}
+
+.dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, 0);
+  animation: rail-move-vertical var(--rail-step-ms) linear infinite;
+}
+
+@keyframes rail-move-vertical {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 799.98px) {
+  .dot {
+    left: 0;
+    top: 50%;
+    transform: translate(0, -50%);
+    animation-name: rail-move-horizontal;
+  }
+
+  @keyframes rail-move-horizontal {
+    0% {
+      left: 0%;
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      left: 100%;
+      opacity: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+    opacity: 1;
+    width: 2px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  @media (max-width: 799.98px) {
+    .dot {
+      width: 16px;
+      height: 2px;
+    }
+  }
+}

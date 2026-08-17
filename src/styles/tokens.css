@@ -1,0 +1,83 @@
+/**
+ * Design tokens for the translation workspace. Values come from
+ * docs/internal/specs/ui.md. Do not introduce additional hues here.
+ */
+
+:root {
+  --color-canvas: #fafafa;
+  --color-ink: #171717;
+  --color-muted-surface: #f5f5f5;
+  --color-hairline: #ebebeb;
+  --color-accent: #ffc799;
+
+  /* Ink mixed with Canvas at decreasing opacity, for hierarchy without new hues. */
+  --ink-90: rgba(23, 23, 23, 0.9);
+  --ink-70: rgba(23, 23, 23, 0.7);
+  --ink-55: rgba(23, 23, 23, 0.55);
+  --ink-40: rgba(23, 23, 23, 0.4);
+  --ink-25: rgba(23, 23, 23, 0.25);
+  --ink-12: rgba(23, 23, 23, 0.12);
+
+  --font-sans:
+    'Geist Variable', 'Noto Sans JP Variable', -apple-system,
+    BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo,
+    sans-serif;
+  --font-mono:
+    'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+
+  --content-max-width: 1200px;
+  --content-padding: 24px;
+  --content-padding-narrow: 16px;
+  --header-height: 56px;
+  --narrow-breakpoint: 800px;
+
+  --radius-sm: 4px;
+
+  --focus-outline-width: 2px;
+  --focus-outline-offset: 2px;
+
+  --rail-step-ms: 650ms;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: var(--focus-outline-width) solid var(--color-ink);
+  outline-offset: var(--focus-outline-offset);
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+}

@@ -1,0 +1,119 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 10px;
+  padding-inline: var(--content-padding-narrow);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+@media (min-width: 800px) {
+  .bar {
+    padding-inline: max(
+      var(--content-padding),
+      calc((100% - var(--content-max-width)) / 2)
+    );
+  }
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metaLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  line-height: 16px;
+  color: var(--ink-55);
+  white-space: nowrap;
+}
+
+.toggleGroup {
+  display: inline-flex;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.toggleItem {
+  appearance: none;
+  border: none;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 400;
+  padding: 6px 12px;
+  min-height: 44px;
+  cursor: pointer;
+  border-right: 1px solid var(--color-hairline);
+}
+
+.toggleItem:last-child {
+  border-right: none;
+}
+
+.toggleItem[data-state='on'] {
+  background: var(--color-accent);
+  font-weight: 600;
+}
+
+.toneTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  appearance: none;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  padding: 6px 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.toneTrigger:hover {
+  background: var(--color-muted-surface);
+}
+
+.tonePopover {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  backdrop-filter: blur(6px);
+  min-width: 140px;
+}
+
+.toneList {
+  display: flex;
+  flex-direction: column;
+}
+
+.toneOption {
+  appearance: none;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-ink);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.toneOption:hover {
+  background: var(--color-muted-surface);
+}
+
+.toneOption[data-selected] {
+  background: var(--color-accent);
+  font-weight: 600;
+}
