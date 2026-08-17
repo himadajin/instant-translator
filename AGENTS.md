@@ -24,7 +24,7 @@ Instant Translator is a quick response text translation web app.
 ## Commits, issues, and pull requests
 Issue titles, PR titles, and commit messages share the same format.
 Each is a concise English one-liner following Conventional Commits,
-e.g. `feat(match): add typo-tolerant matching`, `fix(zle): clear listing on accept-line`.
+e.g. `feat(translation): add automatic detection`, `fix(workspace): restore saved work`.
 A change is titled once.
 The issue names it first,
 and the PR reuses that title as the squash-merge commit message.
