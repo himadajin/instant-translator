@@ -69,11 +69,6 @@ body {
   color-scheme: light;
 }
 
-::selection {
-  background: var(--color-ink);
-  color: var(--color-paper);
-}
-
 :focus {
   outline: none;
 }
