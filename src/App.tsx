@@ -3,13 +3,12 @@ import { createSession } from './translation'
 import type {
   Session,
   TranslationDirection as SessionDirection,
-  TranslationMethod,
   WorkspaceSnapshot,
 } from './translation'
+import { INPUT_LIMIT, INPUT_WARN_AT } from './translation'
 import { Workspace } from './ui'
 import type {
   TranslationDirection as UiDirection,
-  TranslationMode,
   TranslationStatus as UiTranslationStatus,
 } from './ui'
 
@@ -29,14 +28,6 @@ const INITIAL_SNAPSHOT: WorkspaceSnapshot = {
 
 function mapDirection(direction: SessionDirection): UiDirection {
   return direction === 'ja-to-en' ? 'jaToEn' : 'enToJa'
-}
-
-function mapMethod(method: TranslationMethod): TranslationMode {
-  return method === 'idiomatic' ? 'paraphrase' : 'standard'
-}
-
-function toSessionMethod(mode: TranslationMode): TranslationMethod {
-  return mode === 'paraphrase' ? 'idiomatic' : 'standard'
 }
 
 function mapTranslationStatus(
@@ -75,9 +66,13 @@ function toWorkspaceView(snapshot: WorkspaceSnapshot) {
   return {
     connectionStatus: snapshot.connectionStatus,
     sourceText: snapshot.source,
+    sourceLength: snapshot.sourceLength,
+    overLimit: snapshot.overLimit,
+    inputLimit: INPUT_LIMIT,
+    inputWarnAt: INPUT_WARN_AT,
     direction: mapDirection(snapshot.direction),
     isDirectionFixed: snapshot.directionControl === 'fixed',
-    translationMode: mapMethod(snapshot.method),
+    translationMethod: snapshot.method,
     tone: snapshot.tone,
     translationStatus,
     translatedText,
@@ -110,8 +105,8 @@ export default function App() {
       onClear={() => sessionRef.current?.clear()}
       onSwapDirection={() => sessionRef.current?.swapDirection()}
       onReleaseFixedDirection={() => sessionRef.current?.unlockDirection()}
-      onTranslationModeChange={(mode) =>
-        sessionRef.current?.setMethod(toSessionMethod(mode))
+      onTranslationMethodChange={(method) =>
+        sessionRef.current?.setMethod(method)
       }
       onToneChange={(tone) => sessionRef.current?.setTone(tone)}
       onCopy={async () => {

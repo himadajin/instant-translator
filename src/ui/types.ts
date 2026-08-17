@@ -2,24 +2,24 @@
  * Shared types for the translation workspace UI.
  *
  * These mirror the domain language defined in `CONTEXT.md` and the component
- * boundaries in `docs/internal/specs/components.md`. This module intentionally
- * has no dependency on `src/translation`; the UI only knows about the shapes
- * of the values it renders and the callbacks it invokes.
+ * boundaries in `docs/internal/specs/components.md`. Translation method and
+ * tone are imported from the translation domain so the UI does not redefine
+ * their values.
  */
+
+import type { Tone, TranslationMethod } from '../translation'
+
+export type { Tone, TranslationMethod }
 
 export type ConnectionStatus = 'ready' | 'checking' | 'unavailable'
 
 /** The direction currently shown in the language direction bar (source -> target). */
 export type TranslationDirection = 'jaToEn' | 'enToJa'
 
-export type TranslationMode = 'standard' | 'paraphrase'
-
-export type Tone = 'standard' | 'chat' | 'technical' | 'casual'
-
 /**
  * The translation pane's display state. `idle` covers both "no source text
- * yet" and "waiting for the debounce before a translation starts" is split
- * out as `pending` so the pane can show a dimmed previous result per ui.md.
+ * yet"; waiting for the debounce before a translation starts is represented
+ * by `pending` so the pane can show a dimmed previous result per ui.md.
  */
 export type TranslationStatus =
   | 'idle'
@@ -29,9 +29,6 @@ export type TranslationStatus =
   | 'connectionError'
   | 'translationError'
   | 'overLimit'
-
-export const SOURCE_CHAR_LIMIT = 4000
-export const SOURCE_CHAR_WARNING_THRESHOLD = 3200
 
 export const TONE_OPTIONS: readonly { value: Tone; label: string }[] = [
   { value: 'standard', label: '標準' },
@@ -46,6 +43,14 @@ export interface WorkspaceProps {
 
   /** The text the user is translating. Controlled by the caller. */
   sourceText: string
+  /** Number of user-perceived characters in `sourceText`. */
+  sourceLength: number
+  /** Whether `sourceText` exceeds the domain input limit. */
+  overLimit: boolean
+  /** Domain input limit, in user-perceived characters. */
+  inputLimit: number
+  /** Domain warning threshold, in user-perceived characters. */
+  inputWarnAt: number
   onSourceTextChange: (text: string) => void
   /** Clears the source text. Only invoked while `sourceText` is non-empty. */
   onClear: () => void
@@ -59,8 +64,8 @@ export interface WorkspaceProps {
   /** Invoked by pressing the `FIXED` label: returns to auto-detection. */
   onReleaseFixedDirection: () => void
 
-  translationMode: TranslationMode
-  onTranslationModeChange: (mode: TranslationMode) => void
+  translationMethod: TranslationMethod
+  onTranslationMethodChange: (method: TranslationMethod) => void
 
   tone: Tone
   onToneChange: (tone: Tone) => void

@@ -20,12 +20,14 @@ export function TranslationPane({
   translationStatus,
   translatedText,
   previousTranslatedText,
+  inputLimit,
   onCopy,
   onRetry,
 }: {
   translationStatus: TranslationStatus
   translatedText: string
   previousTranslatedText?: string
+  inputLimit: number
   onCopy: () => void | Promise<void>
   onRetry: () => void
 }) {
@@ -73,6 +75,7 @@ export function TranslationPane({
           translationStatus,
           translatedText,
           previousTranslatedText,
+          inputLimit,
           onRetry,
         })}
       </div>
@@ -88,11 +91,13 @@ function renderBody({
   translationStatus,
   translatedText,
   previousTranslatedText,
+  inputLimit,
   onRetry,
 }: {
   translationStatus: TranslationStatus
   translatedText: string
   previousTranslatedText?: string
+  inputLimit: number
   onRetry: () => void
 }) {
   switch (translationStatus) {
@@ -130,7 +135,9 @@ function renderBody({
     case 'overLimit':
       return (
         <div className={styles.errorState}>
-          <p className={styles.errorText}>原文が 4,000 文字を超えています</p>
+          <p className={styles.errorText}>
+            原文が {inputLimit.toLocaleString()} 文字を超えています
+          </p>
         </div>
       )
   }

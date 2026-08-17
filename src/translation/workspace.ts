@@ -1,4 +1,5 @@
 import { INPUT_LIMIT } from './constants'
+import { countGraphemes } from './graphemes'
 import type { WorkspaceSnapshot, WorkspaceState } from './types'
 
 export const defaultWorkspaceState: WorkspaceState = {
@@ -33,6 +34,8 @@ export function createWorkspace(initial?: Partial<WorkspaceState>) {
 }
 
 export function toSnapshot(state: WorkspaceState): WorkspaceSnapshot {
+  const sourceLength = countGraphemes(state.source)
+
   return {
     source: state.source,
     translation: state.translation,
@@ -43,7 +46,7 @@ export function toSnapshot(state: WorkspaceState): WorkspaceSnapshot {
     tone: state.tone,
     translationStatus: state.translationStatus,
     connectionStatus: state.connectionStatus,
-    sourceLength: state.source.length,
-    overLimit: state.source.length > INPUT_LIMIT,
+    sourceLength,
+    overLimit: sourceLength > INPUT_LIMIT,
   }
 }

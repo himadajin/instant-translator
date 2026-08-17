@@ -20,14 +20,18 @@ import styles from '../styles/Workspace.module.css'
 export function Workspace({
   connectionStatus,
   sourceText,
+  sourceLength,
+  overLimit,
+  inputLimit,
+  inputWarnAt,
   onSourceTextChange,
   onClear,
   direction,
   isDirectionFixed,
   onSwapDirection,
   onReleaseFixedDirection,
-  translationMode,
-  onTranslationModeChange,
+  translationMethod,
+  onTranslationMethodChange,
   tone,
   onToneChange,
   translationStatus,
@@ -49,8 +53,8 @@ export function Workspace({
         onReleaseFixedDirection={onReleaseFixedDirection}
       />
       <SettingsBar
-        translationMode={translationMode}
-        onTranslationModeChange={onTranslationModeChange}
+        translationMethod={translationMethod}
+        onTranslationMethodChange={onTranslationMethodChange}
         tone={tone}
         onToneChange={onToneChange}
       />
@@ -58,6 +62,10 @@ export function Workspace({
         <div className={styles.sourceColumn}>
           <SourcePane
             sourceText={sourceText}
+            sourceLength={sourceLength}
+            overLimit={overLimit}
+            inputLimit={inputLimit}
+            inputWarnAt={inputWarnAt}
             onSourceTextChange={onSourceTextChange}
             onClear={onClear}
           />
@@ -68,6 +76,7 @@ export function Workspace({
             translationStatus={translationStatus}
             translatedText={translatedText}
             previousTranslatedText={previousTranslatedText}
+            inputLimit={inputLimit}
             onCopy={onCopy}
             onRetry={onRetry}
           />

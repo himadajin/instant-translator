@@ -1,17 +1,17 @@
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import * as ToggleGroup from '@radix-ui/react-toggle-group'
-import { TONE_OPTIONS, type Tone, type TranslationMode } from './types'
+import { TONE_OPTIONS, type Tone, type TranslationMethod } from './types'
 import styles from '../styles/SettingsBar.module.css'
 
 export function SettingsBar({
-  translationMode,
-  onTranslationModeChange,
+  translationMethod,
+  onTranslationMethodChange,
   tone,
   onToneChange,
 }: {
-  translationMode: TranslationMode
-  onTranslationModeChange: (mode: TranslationMode) => void
+  translationMethod: TranslationMethod
+  onTranslationMethodChange: (method: TranslationMethod) => void
   tone: Tone
   onToneChange: (tone: Tone) => void
 }) {
@@ -89,16 +89,16 @@ export function SettingsBar({
         <ToggleGroup.Root
           type="single"
           className={styles.toggleGroup}
-          value={translationMode}
+          value={translationMethod}
           onValueChange={(value) => {
-            if (value) onTranslationModeChange(value as TranslationMode)
+            if (value) onTranslationMethodChange(value as TranslationMethod)
           }}
           aria-labelledby="settings-standard-label"
         >
           <ToggleGroup.Item className={styles.toggleItem} value="standard">
             標準翻訳
           </ToggleGroup.Item>
-          <ToggleGroup.Item className={styles.toggleItem} value="paraphrase">
+          <ToggleGroup.Item className={styles.toggleItem} value="idiomatic">
             意訳
           </ToggleGroup.Item>
         </ToggleGroup.Root>

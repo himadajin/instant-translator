@@ -8,6 +8,7 @@ import {
 } from './inference'
 import { createPersistence } from './persistence'
 import { buildMessages } from './prompts'
+import { countGraphemes } from './graphemes'
 import type {
   DirectionControl,
   KeyValueStorage,
@@ -87,7 +88,7 @@ export function createSession(deps: SessionDeps = {}): Session {
     abortTranslation()
 
     const state = workspace.read()
-    if (state.source === '' || state.source.length > INPUT_LIMIT) {
+    if (state.source === '' || countGraphemes(state.source) > INPUT_LIMIT) {
       return
     }
 
@@ -114,7 +115,7 @@ export function createSession(deps: SessionDeps = {}): Session {
     if (
       disposed ||
       state.source === '' ||
-      state.source.length > INPUT_LIMIT
+      countGraphemes(state.source) > INPUT_LIMIT
     ) {
       return
     }
@@ -233,7 +234,7 @@ export function createSession(deps: SessionDeps = {}): Session {
 
     applyDirectionFromSource()
 
-    if (source.length > INPUT_LIMIT) {
+    if (countGraphemes(source) > INPUT_LIMIT) {
       if (debounceTimer !== undefined) {
         clearTimeout(debounceTimer)
         debounceTimer = undefined
@@ -431,7 +432,7 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
     translation: loaded.completedTranslation,
     translationIsCurrent: false,
     translationStatus:
-      loaded.source.length <= INPUT_LIMIT ? 'waiting' : 'idle',
+      countGraphemes(loaded.source) <= INPUT_LIMIT ? 'waiting' : 'idle',
   }
 }
 

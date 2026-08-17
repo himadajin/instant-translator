@@ -1,18 +1,30 @@
 import { forwardRef } from 'react'
-import { SOURCE_CHAR_LIMIT, SOURCE_CHAR_WARNING_THRESHOLD } from './types'
 import styles from '../styles/Pane.module.css'
 
 export const SourcePane = forwardRef<
   HTMLTextAreaElement,
   {
     sourceText: string
+    sourceLength: number
+    overLimit: boolean
+    inputLimit: number
+    inputWarnAt: number
     onSourceTextChange: (text: string) => void
     onClear: () => void
   }
->(function SourcePane({ sourceText, onSourceTextChange, onClear }, ref) {
-  const length = sourceText.length
-  const isOverLimit = length > SOURCE_CHAR_LIMIT
-  const isNearLimit = length > SOURCE_CHAR_WARNING_THRESHOLD
+>(function SourcePane(
+  {
+    sourceText,
+    sourceLength,
+    overLimit,
+    inputLimit,
+    inputWarnAt,
+    onSourceTextChange,
+    onClear,
+  },
+  ref,
+) {
+  const isNearLimit = sourceLength > inputWarnAt
 
   return (
     <section className={styles.pane} aria-label="原文">
@@ -22,7 +34,7 @@ export const SourcePane = forwardRef<
           type="button"
           className={styles.paneAction}
           onClick={onClear}
-          disabled={length === 0}
+          disabled={sourceLength === 0}
         >
           CLEAR
         </button>
@@ -39,11 +51,11 @@ export const SourcePane = forwardRef<
       />
 
       <div className={styles.paneFooter}>
-        {isOverLimit ? (
+        {overLimit ? (
           <span className={styles.charCount} data-over-limit="true">
-            原文が {SOURCE_CHAR_LIMIT.toLocaleString()} 文字を{' '}
-            {(length - SOURCE_CHAR_LIMIT).toLocaleString()} 文字超過しています（
-            {(length - SOURCE_CHAR_LIMIT).toLocaleString()}{' '}
+            原文が {inputLimit.toLocaleString()} 文字を{' '}
+            {(sourceLength - inputLimit).toLocaleString()} 文字超過しています（
+            {(sourceLength - inputLimit).toLocaleString()}{' '}
             文字減らす必要があります）
           </span>
         ) : (
@@ -51,7 +63,7 @@ export const SourcePane = forwardRef<
             className={styles.charCount}
             data-near-limit={isNearLimit || undefined}
           >
-            {length.toLocaleString()}/{SOURCE_CHAR_LIMIT.toLocaleString()}
+            {sourceLength.toLocaleString()}/{inputLimit.toLocaleString()}
           </span>
         )}
       </div>

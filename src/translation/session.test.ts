@@ -5,6 +5,7 @@ import {
   HEALTH_URL,
   INFERENCE_BASE_URL,
   INPUT_LIMIT,
+  INPUT_WARN_AT,
   STORAGE_KEY,
 } from './constants'
 import { createSession } from './session'
@@ -395,7 +396,7 @@ describe('Session', () => {
     const over = `${'あ'.repeat(INPUT_LIMIT)}ん`
     session.setSource(over)
     expect(session.getSnapshot().source).toBe(over)
-    expect(session.getSnapshot().source.length).toBe(INPUT_LIMIT + 1)
+    expect(session.getSnapshot().sourceLength).toBe(INPUT_LIMIT + 1)
     expect(session.getSnapshot().overLimit).toBe(true)
     expect(session.getSnapshot().translationIsCurrent).toBe(false)
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
@@ -411,6 +412,75 @@ describe('Session', () => {
     await flush()
     expect(harness.completions).toHaveLength(2)
     expect(harness.completions[1]?.body.messages[1]?.content).toBe(within)
+    session.dispose()
+  })
+
+  it('uses grapheme clusters for warning data and the input boundary', async () => {
+    const harness = createFetchHarness()
+    const session = createSession({
+      fetch: harness.fetchFn,
+      storage: memoryStorage(),
+    })
+    await flush()
+
+    const atWarning = 'e\u0301'.repeat(INPUT_WARN_AT)
+    session.setSource(atWarning)
+    expect(session.getSnapshot().sourceLength).toBe(INPUT_WARN_AT)
+    expect(session.getSnapshot().overLimit).toBe(false)
+
+    const overWarning = `${atWarning}e\u0301`
+    session.setSource(overWarning)
+    expect(session.getSnapshot().sourceLength).toBe(INPUT_WARN_AT + 1)
+    expect(session.getSnapshot().overLimit).toBe(false)
+    session.dispose()
+  })
+
+  it('accepts a long UTF-16 string when its grapheme count is within the limit', async () => {
+    const harness = createFetchHarness()
+    const session = createSession({
+      fetch: harness.fetchFn,
+      storage: memoryStorage(),
+    })
+    await flush()
+
+    const withinByGraphemes = '😀'.repeat(2001)
+    expect(withinByGraphemes.length).toBeGreaterThan(INPUT_LIMIT)
+    session.setSource(withinByGraphemes)
+    expect(session.getSnapshot().sourceLength).toBe(2001)
+    expect(session.getSnapshot().overLimit).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(harness.completions).toHaveLength(1)
+    expect(harness.completions[0]?.body.messages[1]?.content).toBe(
+      withinByGraphemes,
+    )
+    session.dispose()
+  })
+
+  it('accepts exactly 4,000 graphemes and blocks 4,001 graphemes', async () => {
+    const harness = createFetchHarness()
+    const session = createSession({
+      fetch: harness.fetchFn,
+      storage: memoryStorage(),
+    })
+    await flush()
+
+    const exactlyAtLimit = 'e\u0301'.repeat(INPUT_LIMIT)
+    session.setSource(exactlyAtLimit)
+    expect(session.getSnapshot().sourceLength).toBe(INPUT_LIMIT)
+    expect(session.getSnapshot().overLimit).toBe(false)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(harness.completions).toHaveLength(1)
+
+    const justOverLimit = `${exactlyAtLimit}e\u0301`
+    session.setSource(justOverLimit)
+    expect(session.getSnapshot().sourceLength).toBe(INPUT_LIMIT + 1)
+    expect(session.getSnapshot().overLimit).toBe(true)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(harness.completions).toHaveLength(1)
     session.dispose()
   })
 

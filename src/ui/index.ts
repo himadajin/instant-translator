@@ -3,7 +3,7 @@ export type {
   ConnectionStatus,
   Tone,
   TranslationDirection,
-  TranslationMode,
+  TranslationMethod,
   TranslationStatus,
   WorkspaceProps,
 } from './types'
