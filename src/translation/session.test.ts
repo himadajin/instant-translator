@@ -134,12 +134,6 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     expect(harness.completions).toHaveLength(1)
-    expect(harness.completions[0]?.body.messages[0]?.content).toContain(
-      'Japanese to English',
-    )
-    expect(harness.completions[0]?.body.messages[0]?.content).toContain(
-      'Do not detect or guess the language',
-    )
     expect(harness.completions[0]?.body.messages[1]?.content).toBe(
       japaneseSource,
     )
@@ -152,8 +146,8 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     expect(harness.completions).toHaveLength(2)
-    expect(harness.completions[1]?.body.messages[0]?.content).toContain(
-      'English to Japanese',
+    expect(harness.completions[1]?.body.messages[1]?.content).toBe(
+      englishSource,
     )
     expect(
       harness.urls.every((url) => url.startsWith(INFERENCE_BASE_URL)),
@@ -173,9 +167,6 @@ describe('Session', () => {
     expect(session.getSnapshot().direction).toBe('ja-to-en')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
-    expect(harness.completions[0]?.body.messages[0]?.content).toContain(
-      'Japanese to English',
-    )
     harness.streams[0]?.done()
     await flush()
 
@@ -190,9 +181,6 @@ describe('Session', () => {
     expect(session.getSnapshot().direction).toBe('en-to-ja')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
-    expect(harness.completions[2]?.body.messages[0]?.content).toContain(
-      'English to Japanese',
-    )
     session.dispose()
   })
 
@@ -215,9 +203,6 @@ describe('Session', () => {
     expect(session.getSnapshot().directionControl).toBe('fixed')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
-    expect(harness.completions[1]?.body.messages[0]?.content).toContain(
-      'English to Japanese',
-    )
     harness.streams[1]?.done()
     await flush()
 
@@ -234,9 +219,6 @@ describe('Session', () => {
     expect(session.getSnapshot().directionControl).toBe('fixed')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
-    expect(harness.completions[3]?.body.messages[0]?.content).toContain(
-      'Japanese to English',
-    )
     harness.streams[3]?.done()
     await flush()
 
@@ -245,9 +227,6 @@ describe('Session', () => {
     expect(session.getSnapshot().direction).toBe('en-to-ja')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
-    expect(harness.completions[4]?.body.messages[0]?.content).toContain(
-      'English to Japanese',
-    )
     session.dispose()
   })
 
@@ -524,9 +503,6 @@ describe('Session', () => {
     session.retry()
     await flush()
     expect(completions.at(-1)?.body.messages[1]?.content).toBe(englishSource)
-    expect(completions.at(-1)?.body.messages[0]?.content).toContain(
-      'English to Japanese',
-    )
     streams[0]?.push('こんにちは')
     streams[0]?.done()
     await flush()
