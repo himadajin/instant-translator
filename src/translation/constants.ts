@@ -4,7 +4,35 @@ export const INPUT_LIMIT = 4000
 
 export const INPUT_WARN_AT = 3200
 
-export const INFERENCE_BASE_URL = 'http://127.0.0.1:8080'
+const DEFAULT_INFERENCE_PORT = 8080
+
+export function parseInferencePort(value: string | undefined): number {
+  if (value === undefined) {
+    return DEFAULT_INFERENCE_PORT
+  }
+
+  const trimmed = value.trim()
+  if (trimmed === '' || !/^[0-9]+$/.test(trimmed)) {
+    throw invalidInferencePort(value)
+  }
+
+  const port = Number(trimmed)
+  if (port < 1 || port > 65535) {
+    throw invalidInferencePort(value)
+  }
+
+  return port
+}
+
+function invalidInferencePort(value: string): Error {
+  return new Error(
+    `INFERENCE_PORT must be an integer from 1 to 65535, got ${JSON.stringify(value)}`,
+  )
+}
+
+export const INFERENCE_PORT = parseInferencePort(import.meta.env.INFERENCE_PORT)
+
+export const INFERENCE_BASE_URL = `http://127.0.0.1:${INFERENCE_PORT}`
 
 export const HEALTH_URL = `${INFERENCE_BASE_URL}/health`
 

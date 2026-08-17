@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
+  envPrefix: ['VITE_', 'INFERENCE_'],
   test: {
     environment: 'node',
   },

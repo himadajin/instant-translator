@@ -3,6 +3,7 @@ import {
   CHAT_COMPLETIONS_URL,
   DEBOUNCE_MS,
   HEALTH_URL,
+  INFERENCE_BASE_URL,
   INPUT_LIMIT,
   STORAGE_KEY,
 } from './constants'
@@ -155,7 +156,7 @@ describe('Session', () => {
       'English to Japanese',
     )
     expect(
-      harness.urls.every((url) => url.startsWith('http://127.0.0.1:8080')),
+      harness.urls.every((url) => url.startsWith(INFERENCE_BASE_URL)),
     ).toBe(true)
     session.dispose()
   })

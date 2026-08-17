@@ -35,7 +35,8 @@ llama-server -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
 ```
 
 `llama-server` は既定で `127.0.0.1` の `8080` 番ポートで待ち受ける。
-これは Instant Translator の接続先と同じなので、追加のオプションは要らない。
+Instant Translator の既定の接続先も同じなので、追加のオプションは要らない。
+ポートを変える場合は[設定](configuration.md)を見る。
 
 起動できたかどうかは、別のターミナルから確認できる。
 `{"status":"ok"}` が返れば、モデルの読み込みまで完了している。
