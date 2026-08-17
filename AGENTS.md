@@ -12,6 +12,15 @@ Instant Translator is a quick response text translation web app.
 - Make architecture decisions for the long term.
   Do not accept stopgap that only works for now and is meant to be replaced later.
 
+## Docs and sources of truth
+
+- `docs/` describes current behavior only — no history, no plans.
+- `docs/user/` — installation, configuration, usage
+- `docs/internal/specs/` — confirmed behavior specs, component boundaries
+- When a change alters documented behavior, update the affected doc in the same PR.
+- If docs and code disagree, do not assume either side is correct — report the mismatch and
+  confirm which one to fix.
+
 ## Commits, issues, and pull requests
 Issue titles, PR titles, and commit messages share the same format.
 Each is a concise English one-liner following Conventional Commits,
