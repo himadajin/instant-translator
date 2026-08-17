@@ -2,6 +2,16 @@
 
 Instant Translator is a quick response text translation web app.
 
+## Engineering Principles
+
+- Do not preserve backwards compatibility.
+  Remove obsolete paths instead of adding compatibility layers, migrations.
+- Choose the simplest implementation that fully meets the current requirements.
+  Avoid speculative abstractions, configuration, and indirection.
+- Keep components modular and concerns clearly separated.
+- Make architecture decisions for the long term.
+  Do not accept stopgap that only works for now and is meant to be replaced later.
+
 ## Commits, issues, and pull requests
 Issue titles, PR titles, and commit messages share the same format.
 Each is a concise English one-liner following Conventional Commits,
