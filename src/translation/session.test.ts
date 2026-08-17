@@ -10,11 +10,7 @@ import {
 } from './constants'
 import { createSession } from './session'
 import type { Inference } from './inference'
-import type {
-  ConnectionStatus,
-  KeyValueStorage,
-  WorkState,
-} from './types'
+import type { ConnectionStatus, KeyValueStorage, WorkState } from './types'
 
 function memoryStorage(initial?: Record<string, string>): KeyValueStorage {
   const data = new Map(Object.entries(initial ?? {}))
@@ -76,6 +72,15 @@ type CompletionsCall = {
     stream: boolean
   }
   signal?: AbortSignal
+}
+
+function sourceFrom(content: string): string {
+  const [, ...rest] = content.split('\n\n')
+  return rest.join('\n\n')
+}
+
+function requestedSource(call: CompletionsCall | undefined): string {
+  return sourceFrom(call?.body.messages[0]?.content ?? '')
 }
 
 function createFetchHarness(options?: { health?: 'ok' | 'down' }) {
@@ -148,9 +153,7 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     expect(harness.completions).toHaveLength(1)
-    expect(harness.completions[0]?.body.messages[1]?.content).toBe(
-      japaneseSource,
-    )
+    expect(requestedSource(harness.completions[0])).toBe(japaneseSource)
 
     harness.streams[0]?.done()
     await flush()
@@ -160,9 +163,7 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     expect(harness.completions).toHaveLength(2)
-    expect(harness.completions[1]?.body.messages[1]?.content).toBe(
-      englishSource,
-    )
+    expect(requestedSource(harness.completions[1])).toBe(englishSource)
     expect(
       harness.urls.every((url) => url.startsWith(INFERENCE_BASE_URL)),
     ).toBe(true)
@@ -265,9 +266,7 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(1)
     await flush()
     expect(harness.completions).toHaveLength(1)
-    expect(harness.completions[0]?.body.messages[1]?.content).toBe(
-      japaneseSource,
-    )
+    expect(requestedSource(harness.completions[0])).toBe(japaneseSource)
     session.dispose()
   })
 
@@ -411,7 +410,7 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(1)
     await flush()
     expect(harness.completions).toHaveLength(2)
-    expect(harness.completions[1]?.body.messages[1]?.content).toBe(within)
+    expect(requestedSource(harness.completions[1])).toBe(within)
     session.dispose()
   })
 
@@ -452,9 +451,7 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     expect(harness.completions).toHaveLength(1)
-    expect(harness.completions[0]?.body.messages[1]?.content).toBe(
-      withinByGraphemes,
-    )
+    expect(requestedSource(harness.completions[0])).toBe(withinByGraphemes)
     session.dispose()
   })
 
@@ -585,7 +582,7 @@ describe('Session', () => {
     mode = 'ok'
     session.retry()
     await flush()
-    expect(completions.at(-1)?.body.messages[1]?.content).toBe(englishSource)
+    expect(requestedSource(completions.at(-1))).toBe(englishSource)
     streams[0]?.push('こんにちは')
     streams[0]?.done()
     await flush()
@@ -694,9 +691,7 @@ describe('Session', () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     expect(restoredHarness.completions).toHaveLength(1)
-    expect(restoredHarness.completions[0]?.body.messages[1]?.content).toBe(
-      newerSource,
-    )
+    expect(requestedSource(restoredHarness.completions[0])).toBe(newerSource)
     restored.dispose()
   })
 
@@ -873,7 +868,7 @@ describe('Session', () => {
     const inference: Inference = {
       checkHealth: vi.fn(async (): Promise<ConnectionStatus> => 'ready'),
       async *translate(messages) {
-        sources.push(messages[1]?.content ?? '')
+        sources.push(sourceFrom(messages[0]?.content ?? ''))
         yield 'Latest'
       },
     }

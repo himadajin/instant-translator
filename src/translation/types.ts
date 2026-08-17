@@ -19,7 +19,7 @@ export type ConnectionStatus = 'checking' | 'ready' | 'unavailable'
 export type DetectedLanguage = 'japanese' | 'english' | 'ambiguous'
 
 export type ChatMessage = {
-  role: 'system' | 'user'
+  role: 'user'
   content: string
 }
 

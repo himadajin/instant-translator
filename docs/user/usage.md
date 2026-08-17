@@ -9,7 +9,7 @@
 1. ローカル推論サーバを起動する。
 
    ```sh
-   llama-server -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
+   llama-server -hf tencent/Hy-MT2-1.8B-GGUF:Q4_K_M
    ```
 
 2. リポジトリのディレクトリでアプリを起動する。

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { CHAT_COMPLETIONS_URL, HEALTH_URL, SAMPLING } from './constants'
+import { CHAT_COMPLETIONS_URL, HEALTH_URL } from './constants'
 import { ConnectionError, createInference, TranslationError } from './inference'
 
 function sseChunk(text: string): string {
@@ -23,12 +23,12 @@ describe('Inference', () => {
         expect(init?.method).toBe('POST')
         const body = JSON.parse(String(init?.body)) as Record<string, unknown>
         expect(body.stream).toBe(true)
-        expect(body.temperature).toBe(SAMPLING.temperature)
-        expect(body.top_k).toBe(SAMPLING.top_k)
-        expect(body.repeat_penalty).toBe(SAMPLING.repeat_penalty)
+        expect(body.temperature).toBe(0.7)
+        expect(body.top_p).toBe(0.6)
+        expect(body.top_k).toBe(20)
+        expect(body.repeat_penalty).toBe(1.05)
         expect(body.messages).toEqual([
-          { role: 'system', content: 'sys' },
-          { role: 'user', content: 'こんにちは' },
+          { role: 'user', content: 'Translate: こんにちは' },
         ])
         const stream = new ReadableStream<Uint8Array>({
           start(controller) {
@@ -46,10 +46,7 @@ describe('Inference', () => {
     const inference = createInference(fetchFn)
     const chunks: string[] = []
     for await (const chunk of inference.translate(
-      [
-        { role: 'system', content: 'sys' },
-        { role: 'user', content: 'こんにちは' },
-      ],
+      [{ role: 'user', content: 'Translate: こんにちは' }],
       new AbortController().signal,
     )) {
       chunks.push(chunk)
@@ -153,7 +150,10 @@ describe('Inference', () => {
   })
 
   it('rethrows an AbortError from the stream unchanged', async () => {
-    const abortError = new DOMException('The operation was aborted', 'AbortError')
+    const abortError = new DOMException(
+      'The operation was aborted',
+      'AbortError',
+    )
     const fetchFn = vi.fn(async () => {
       const stream = new ReadableStream<Uint8Array>({
         start(controller) {

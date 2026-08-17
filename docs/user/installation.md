@@ -26,12 +26,12 @@ brew install llama.cpp
 ## 2. モデルを取得して起動する
 
 使用モデルは
-[`LiquidAI/LFM2.5-1.2B-JP-202606-GGUF`](https://huggingface.co/LiquidAI/LFM2.5-1.2B-JP-202606-GGUF)
-の 8-bit 量子化（`Q8_0`）である。次のコマンドはモデルを取得してからサーバを起動する。
+[`tencent/Hy-MT2-1.8B-GGUF`](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF)
+の 4-bit 量子化（`Q4_K_M`）である。次のコマンドはモデルを取得してからサーバを起動する。
 初回はダウンロードのぶん時間がかかる。
 
 ```sh
-llama-server -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
+llama-server -hf tencent/Hy-MT2-1.8B-GGUF:Q4_K_M
 ```
 
 `llama-server` は既定で `127.0.0.1` の `8080` 番ポートで待ち受ける。
@@ -45,8 +45,8 @@ Instant Translator の既定の接続先も同じなので、追加のオプシ�
 curl http://127.0.0.1:8080/health
 ```
 
-モデルには Liquid AI のライセンスが適用される。条件は Hugging Face のリポジトリにある `LICENSE`
-を確認する。
+モデルには Tencent のライセンスが適用される。条件は Hugging Face のリポジトリにある
+`LICENSE.txt` を確認する。
 
 ## 3. アプリを導入する
 

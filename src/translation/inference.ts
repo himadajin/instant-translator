@@ -62,6 +62,7 @@ export function createInference(fetchFn: typeof fetch = fetch): Inference {
             messages,
             stream: true,
             temperature: SAMPLING.temperature,
+            top_p: SAMPLING.top_p,
             top_k: SAMPLING.top_k,
             repeat_penalty: SAMPLING.repeat_penalty,
           }),

@@ -9,7 +9,7 @@ Instant Translator に設定画面はない。接続先ポートは環境変数 
 ポートの既定は `8080` で、`llama-server` の既定と同じである。通常は次のコマンドでそのまま繋がる。
 
 ```sh
-llama-server -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
+llama-server -hf tencent/Hy-MT2-1.8B-GGUF:Q4_K_M
 ```
 
 別のポートで `llama-server` を待つ場合は、アプリ側も同じポートにする。
@@ -22,7 +22,7 @@ VITE_INFERENCE_PORT=8081
 `llama-server` 側も揃える。
 
 ```sh
-llama-server --port 8081 -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
+llama-server --port 8081 -hf tencent/Hy-MT2-1.8B-GGUF:Q4_K_M
 ```
 
 変更を反映するには `npm run dev` を再起動する。
@@ -33,17 +33,20 @@ llama-server --port 8081 -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
 
 ## 量子化を選ぶ
 
-既定は 8-bit 相当の `Q8_0` である。`-hf` の `:` 以降で量子化を指定する。
-指定を省くと `Q4_K_M` が選ばれるため、既定で使うときも `:Q8_0` を明示する。
+既定は 4-bit 相当の `Q4_K_M` である。`-hf` の `:` 以降で量子化を指定する。
+指定を省いた場合も `Q4_K_M` が選ばれるが、既定で使うときも `:Q4_K_M` を明示する。
 
-[モデルのリポジトリ](https://huggingface.co/LiquidAI/LFM2.5-1.2B-JP-202606-GGUF)には
-`F16`、`Q8_0`、`Q6_K`、`Q5_K_M`、`Q4_K_M`、`Q4_0` がある。
-量子化を軽くするとメモリ使用量は減るが、翻訳品質は落ちる。
+[モデルのリポジトリ](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF)には
+`Q4_K_M`（約 1.1 GB）、`Q6_K`（約 1.5 GB）、`Q8_0`（約 1.9 GB）がある。
+量子化を重くするとメモリ使用量は増えるが、翻訳品質は上がる。
+より軽い量子化は
+[`tencent/Hy-MT2-1.8B-2Bit-GGUF`](https://huggingface.co/tencent/Hy-MT2-1.8B-2Bit-GGUF)
+など別のリポジトリで公開されている。
 
 ダウンロード済みのモデルファイルを直接指定することもできる。
 
 ```sh
-llama-server -m /path/to/LFM2.5-1.2B-JP-202606-Q8_0.gguf
+llama-server -m /path/to/Hy-MT2-1.8B-Q4_K_M.gguf
 ```
 
 `-hf` で取得したモデルの保存先は、環境変数 `LLAMA_CACHE` で変えられる。

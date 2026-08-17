@@ -40,10 +40,11 @@ export const CHAT_COMPLETIONS_URL = `${INFERENCE_BASE_URL}/v1/chat/completions`
 
 export const STORAGE_KEY = 'instant-translator.work-state'
 
-// LFM2.5-1.2B-JP-202606 model card (Hugging Face): temperature 0.1, top_k 50, repetition_penalty 1.05.
+// Hy-MT2 model card (Hugging Face): temperature 0.7, top_p 0.6, top_k 20, repetition_penalty 1.05.
 // llama.cpp's OpenAI-compatible body uses repeat_penalty for that last value.
 export const SAMPLING = {
-  temperature: 0.1,
-  top_k: 50,
+  temperature: 0.7,
+  top_p: 0.6,
+  top_k: 20,
   repeat_penalty: 1.05,
 } as const
