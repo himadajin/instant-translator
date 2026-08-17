@@ -93,7 +93,6 @@ export default function App() {
     const session = createSession()
     sessionRef.current = session
     setSnapshot(session.getSnapshot())
-    void session.checkConnection()
     const unsubscribe = session.subscribe(setSnapshot)
     return () => {
       unsubscribe()
@@ -126,9 +125,6 @@ export default function App() {
         const session = sessionRef.current
         if (!session) {
           return
-        }
-        if (session.getSnapshot().translationStatus === 'connection-failed') {
-          void session.checkConnection()
         }
         session.retry()
       }}

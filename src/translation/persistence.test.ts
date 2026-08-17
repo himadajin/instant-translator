@@ -21,6 +21,10 @@ function memoryStorage(initial?: Record<string, string>): KeyValueStorage {
 const sample: WorkState = {
   source: 'こんにちは',
   completedTranslation: 'Hello',
+  completedSource: 'こんにちは',
+  completedDirection: 'ja-to-en',
+  completedMethod: 'standard',
+  completedTone: 'chat',
   direction: 'ja-to-en',
   directionControl: 'auto',
   method: 'standard',
@@ -45,22 +49,39 @@ describe('Persistence', () => {
     expect(persistence.load()?.source).toBe('ありがとう')
   })
 
-  it('clears saved source and translation while keeping direction, method, and tone', () => {
+  it('rejects the old state shape without completed-result provenance', () => {
     const storage = memoryStorage()
     const persistence = createPersistence(storage)
-    persistence.save({
-      ...sample,
-      directionControl: 'fixed',
-      method: 'idiomatic',
-    })
-    persistence.clearSourceAndTranslation()
-    expect(persistence.load()).toEqual({
-      source: '',
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        source: sample.source,
+        completedTranslation: sample.completedTranslation,
+        direction: sample.direction,
+        directionControl: sample.directionControl,
+        method: sample.method,
+        tone: sample.tone,
+      }),
+    )
+    expect(persistence.load()).toBeNull()
+  })
+
+  it('accepts an empty completed-result record', () => {
+    const storage = memoryStorage()
+    const persistence = createPersistence(storage)
+    const empty: WorkState = {
+      source: 'こんにちは',
       completedTranslation: '',
+      completedSource: '',
+      completedDirection: null,
+      completedMethod: null,
+      completedTone: null,
       direction: 'ja-to-en',
-      directionControl: 'fixed',
-      method: 'idiomatic',
-      tone: 'chat',
-    })
+      directionControl: 'auto',
+      method: 'standard',
+      tone: 'standard',
+    }
+    persistence.save(empty)
+    expect(persistence.load()).toEqual(empty)
   })
 })

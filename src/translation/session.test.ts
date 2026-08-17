@@ -8,7 +8,12 @@ import {
   STORAGE_KEY,
 } from './constants'
 import { createSession } from './session'
-import type { KeyValueStorage, WorkState } from './types'
+import type { Inference } from './inference'
+import type {
+  ConnectionStatus,
+  KeyValueStorage,
+  WorkState,
+} from './types'
 
 function memoryStorage(initial?: Record<string, string>): KeyValueStorage {
   const data = new Map(Object.entries(initial ?? {}))
@@ -105,6 +110,14 @@ async function flush(): Promise<void> {
   for (let i = 0; i < 8; i += 1) {
     await Promise.resolve()
   }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve
+  })
+  return { promise, resolve }
 }
 
 const japaneseSource = 'こんにちは、今日は良い天気です。'
@@ -573,6 +586,240 @@ describe('Session', () => {
     expect(session.getSnapshot().tone).toBe('standard')
     expect(session.getSnapshot().directionControl).toBe('auto')
     expect(session.getSnapshot().direction).toBe('ja-to-en')
+    session.dispose()
+  })
+
+  it('restores an old completed result as non-current and retranslates a newer source', async () => {
+    const storage = memoryStorage()
+    const harness = createFetchHarness()
+    const session = createSession({ fetch: harness.fetchFn, storage })
+    await flush()
+
+    session.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    harness.streams[0]?.push('Hello')
+    harness.streams[0]?.done()
+    await flush()
+
+    const newerSource = 'ありがとうございます。'
+    session.setSource(newerSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(harness.completions).toHaveLength(2)
+    session.dispose()
+
+    const restoredHarness = createFetchHarness()
+    const restored = createSession({
+      fetch: restoredHarness.fetchFn,
+      storage,
+    })
+    await flush()
+    expect(restored.getSnapshot().source).toBe(newerSource)
+    expect(restored.getSnapshot().translation).toBe('Hello')
+    expect(restored.getSnapshot().translationIsCurrent).toBe(false)
+    expect(restored.getSnapshot().translationStatus).toBe('waiting')
+    expect(restoredHarness.completions).toHaveLength(0)
+
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(restoredHarness.completions).toHaveLength(1)
+    expect(restoredHarness.completions[0]?.body.messages[1]?.content).toBe(
+      newerSource,
+    )
+    restored.dispose()
+  })
+
+  it('restores an exact completed provenance without requesting another translation', async () => {
+    const storage = memoryStorage()
+    const firstHarness = createFetchHarness()
+    const first = createSession({ fetch: firstHarness.fetchFn, storage })
+    await flush()
+    first.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    firstHarness.streams[0]?.push('Hello')
+    firstHarness.streams[0]?.done()
+    await flush()
+    first.dispose()
+
+    const restoredHarness = createFetchHarness()
+    const restored = createSession({
+      fetch: restoredHarness.fetchFn,
+      storage,
+    })
+    await flush()
+    expect(restored.getSnapshot().translation).toBe('Hello')
+    expect(restored.getSnapshot().translationIsCurrent).toBe(true)
+    expect(restored.getSnapshot().translationStatus).toBe('complete')
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(restoredHarness.completions).toHaveLength(0)
+    restored.dispose()
+  })
+
+  it('does not request a restored over-limit source', async () => {
+    const storage = memoryStorage()
+    const firstHarness = createFetchHarness()
+    const first = createSession({ fetch: firstHarness.fetchFn, storage })
+    await flush()
+    first.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    firstHarness.streams[0]?.push('Hello')
+    firstHarness.streams[0]?.done()
+    await flush()
+
+    const overLimitSource = `${'あ'.repeat(INPUT_LIMIT)}ん`
+    first.setSource(overLimitSource)
+    first.dispose()
+
+    const restoredHarness = createFetchHarness()
+    const restored = createSession({
+      fetch: restoredHarness.fetchFn,
+      storage,
+    })
+    await flush()
+    expect(restored.getSnapshot().source).toBe(overLimitSource)
+    expect(restored.getSnapshot().translation).toBe('Hello')
+    expect(restored.getSnapshot().translationIsCurrent).toBe(false)
+    expect(restored.getSnapshot().translationStatus).toBe('idle')
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 2)
+    await flush()
+    expect(restoredHarness.completions).toHaveLength(0)
+    restored.dispose()
+  })
+
+  it('treats a [DONE]-only stream after a completion as a translation failure', async () => {
+    const storage = memoryStorage()
+    const harness = createFetchHarness()
+    const session = createSession({ fetch: harness.fetchFn, storage })
+    await flush()
+    session.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    harness.streams[0]?.push('Hello')
+    harness.streams[0]?.done()
+    await flush()
+
+    const newerSource = 'ありがとうございます。'
+    session.setSource(newerSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    harness.streams[1]?.done()
+    await flush()
+
+    expect(session.getSnapshot().translation).toBe('Hello')
+    expect(session.getSnapshot().translationIsCurrent).toBe(false)
+    expect(session.getSnapshot().translationStatus).toBe('translation-failed')
+    const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? '{}') as WorkState
+    expect(saved.completedTranslation).toBe('Hello')
+    expect(saved.completedSource).toBe(japaneseSource)
+    session.dispose()
+  })
+
+  it('treats a first [DONE]-only stream as a translation failure without completed text', async () => {
+    const storage = memoryStorage()
+    const harness = createFetchHarness()
+    const session = createSession({ fetch: harness.fetchFn, storage })
+    await flush()
+    session.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    harness.streams[0]?.done()
+    await flush()
+
+    expect(session.getSnapshot().translation).toBe('')
+    expect(session.getSnapshot().translationIsCurrent).toBe(false)
+    expect(session.getSnapshot().translationStatus).toBe('translation-failed')
+    const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? '{}') as WorkState
+    expect(saved.completedTranslation).toBe('')
+    expect(saved.completedSource).toBe('')
+    session.dispose()
+  })
+
+  it('starts exactly one initial health check', async () => {
+    const harness = createFetchHarness()
+    const session = createSession({
+      fetch: harness.fetchFn,
+      storage: memoryStorage(),
+    })
+    await flush()
+    expect(harness.urls.filter((url) => url === HEALTH_URL)).toHaveLength(1)
+    session.dispose()
+  })
+
+  it('ignores stale health responses after a newer health result', async () => {
+    const first = deferred<ConnectionStatus>()
+    const second = deferred<ConnectionStatus>()
+    const responses = [first, second]
+    const inference: Inference = {
+      checkHealth: vi.fn(() => responses.shift()!.promise),
+      async *translate() {
+        yield 'unused'
+      },
+    }
+    const session = createSession({
+      inference,
+      storage: memoryStorage(),
+    })
+    await flush()
+    const newerCheck = session.checkConnection()
+    second.resolve('ready')
+    await newerCheck
+    first.resolve('unavailable')
+    await flush()
+    expect(session.getSnapshot().connectionStatus).toBe('ready')
+    session.dispose()
+  })
+
+  it('lets a translation result win over a stale initial health response', async () => {
+    const health = deferred<ConnectionStatus>()
+    const translate = vi.fn(async function* () {
+      yield 'Hello'
+    })
+    const inference: Inference = {
+      checkHealth: vi.fn(() => health.promise),
+      translate,
+    }
+    const session = createSession({
+      inference,
+      storage: memoryStorage(),
+    })
+    await flush()
+    session.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(session.getSnapshot().translationStatus).toBe('complete')
+    health.resolve('unavailable')
+    await flush()
+    expect(session.getSnapshot().connectionStatus).toBe('ready')
+    expect(translate).toHaveBeenCalledTimes(1)
+    session.dispose()
+  })
+
+  it('retries the latest source once without starting another health check', async () => {
+    const sources: string[] = []
+    const inference: Inference = {
+      checkHealth: vi.fn(async (): Promise<ConnectionStatus> => 'ready'),
+      async *translate(messages) {
+        sources.push(messages[1]?.content ?? '')
+        yield 'Latest'
+      },
+    }
+    const session = createSession({
+      inference,
+      storage: memoryStorage(),
+    })
+    await flush()
+    const latestSource = '最新の原文です。'
+    session.setSource('古い原文です。')
+    session.setSource(latestSource)
+    session.retry()
+    await flush()
+    expect(sources).toEqual([latestSource])
+    expect(inference.checkHealth).toHaveBeenCalledTimes(1)
+    expect(session.getSnapshot().translationStatus).toBe('complete')
     session.dispose()
   })
 })

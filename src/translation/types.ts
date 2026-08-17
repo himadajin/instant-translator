@@ -26,6 +26,10 @@ export type ChatMessage = {
 export type WorkState = {
   source: string
   completedTranslation: string
+  completedSource: string
+  completedDirection: TranslationDirection | null
+  completedMethod: TranslationMethod | null
+  completedTone: Tone | null
   direction: TranslationDirection
   directionControl: DirectionControl
   method: TranslationMethod

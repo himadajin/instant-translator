@@ -1,15 +1,6 @@
 import { STORAGE_KEY } from './constants'
 import type { KeyValueStorage, WorkState } from './types'
 
-const defaultWorkState: WorkState = {
-  source: '',
-  completedTranslation: '',
-  direction: 'ja-to-en',
-  directionControl: 'auto',
-  method: 'standard',
-  tone: 'standard',
-}
-
 export function createPersistence(storage: KeyValueStorage) {
   return {
     load(): WorkState | null {
@@ -31,15 +22,6 @@ export function createPersistence(storage: KeyValueStorage) {
     save(state: WorkState): void {
       storage.setItem(STORAGE_KEY, JSON.stringify(state))
     },
-
-    clearSourceAndTranslation(): void {
-      const current = this.load() ?? defaultWorkState
-      this.save({
-        ...current,
-        source: '',
-        completedTranslation: '',
-      })
-    },
   }
 }
 
@@ -48,9 +30,33 @@ function isWorkState(value: unknown): value is WorkState {
     return false
   }
   const record = value as Record<string, unknown>
+  const completedTranslation = record.completedTranslation
+  const completedSource = record.completedSource
+  const completedDirection = record.completedDirection
+  const completedMethod = record.completedMethod
+  const completedTone = record.completedTone
+
+  const hasNoCompletedTranslation =
+    completedTranslation === '' &&
+    completedSource === '' &&
+    completedDirection === null &&
+    completedMethod === null &&
+    completedTone === null
+  const hasCompletedTranslation =
+    typeof completedTranslation === 'string' &&
+    completedTranslation.length > 0 &&
+    typeof completedSource === 'string' &&
+    completedSource.length > 0 &&
+    (completedDirection === 'ja-to-en' || completedDirection === 'en-to-ja') &&
+    (completedMethod === 'standard' || completedMethod === 'idiomatic') &&
+    (completedTone === 'standard' ||
+      completedTone === 'chat' ||
+      completedTone === 'technical' ||
+      completedTone === 'casual')
+
   return (
     typeof record.source === 'string' &&
-    typeof record.completedTranslation === 'string' &&
+    (hasNoCompletedTranslation || hasCompletedTranslation) &&
     (record.direction === 'ja-to-en' || record.direction === 'en-to-ja') &&
     (record.directionControl === 'auto' ||
       record.directionControl === 'fixed') &&

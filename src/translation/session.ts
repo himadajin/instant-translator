@@ -51,6 +51,7 @@ export function createSession(deps: SessionDeps = {}): Session {
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestId = 0
   let healthAbort: AbortController | undefined
+  let healthGeneration = 0
   let translateAbort: AbortController | undefined
   let disposed = false
 
@@ -65,14 +66,7 @@ export function createSession(deps: SessionDeps = {}): Session {
     }
   }
 
-  function persist(complete: boolean): void {
-    const state = workspace.read()
-    const completedTranslation = complete
-      ? state.translation
-      : state.completedTranslation
-    if (complete) {
-      workspace.write({ completedTranslation })
-    }
+  function persist(): void {
     persistence.save(workStateFrom(workspace.read()))
   }
 
@@ -117,9 +111,15 @@ export function createSession(deps: SessionDeps = {}): Session {
 
   async function startTranslate(): Promise<void> {
     const state = workspace.read()
-    if (state.source === '' || state.source.length > INPUT_LIMIT) {
+    if (
+      disposed ||
+      state.source === '' ||
+      state.source.length > INPUT_LIMIT
+    ) {
       return
     }
+
+    invalidateHealthCheck()
 
     const direction = resolveDirection(state)
     workspace.write({
@@ -127,7 +127,7 @@ export function createSession(deps: SessionDeps = {}): Session {
       translationStatus: 'translating',
       translationIsCurrent: false,
     })
-    persist(false)
+    persist()
     emit()
 
     const id = ++requestId
@@ -150,6 +150,9 @@ export function createSession(deps: SessionDeps = {}): Session {
         if (id !== requestId) {
           return
         }
+        if (chunk.length === 0) {
+          continue
+        }
         if (!gotChunk) {
           gotChunk = true
           workspace.write({
@@ -166,12 +169,27 @@ export function createSession(deps: SessionDeps = {}): Session {
       if (id !== requestId) {
         return
       }
+      if (!gotChunk) {
+        workspace.write({
+          translationStatus: 'translation-failed',
+          translationIsCurrent: false,
+        })
+        persist()
+        emit()
+        return
+      }
+
+      const completed = workspace.read()
       workspace.write({
         translationStatus: 'complete',
-        completedTranslation: workspace.read().translation,
+        completedTranslation: completed.translation,
+        completedSource: completed.source,
+        completedDirection: direction,
+        completedMethod: completed.method,
+        completedTone: completed.tone,
         connectionStatus: 'ready',
       })
-      persist(true)
+      persist()
       emit()
     } catch (error) {
       if (id !== requestId || isAbortError(error)) {
@@ -185,7 +203,7 @@ export function createSession(deps: SessionDeps = {}): Session {
       } else {
         workspace.write({ translationStatus: 'translation-failed' })
       }
-      persist(false)
+      persist()
       emit()
     }
   }
@@ -201,10 +219,14 @@ export function createSession(deps: SessionDeps = {}): Session {
       workspace.write({
         translation: '',
         completedTranslation: '',
+        completedSource: '',
+        completedDirection: null,
+        completedMethod: null,
+        completedTone: null,
         translationIsCurrent: true,
         translationStatus: 'idle',
       })
-      persist(true)
+      persist()
       emit()
       return
     }
@@ -221,12 +243,12 @@ export function createSession(deps: SessionDeps = {}): Session {
         translationIsCurrent: false,
         translationStatus: 'idle',
       })
-      persist(false)
+      persist()
       emit()
       return
     }
 
-    persist(false)
+    persist()
     scheduleTranslate()
   }
 
@@ -237,7 +259,7 @@ export function createSession(deps: SessionDeps = {}): Session {
       direction: next,
       directionControl: 'fixed',
     })
-    persist(false)
+    persist()
     emit()
     scheduleTranslate()
   }
@@ -245,21 +267,21 @@ export function createSession(deps: SessionDeps = {}): Session {
   function unlockDirection(): void {
     workspace.write({ directionControl: 'auto' })
     applyDirectionFromSource()
-    persist(false)
+    persist()
     emit()
     scheduleTranslate()
   }
 
   function setMethod(method: TranslationMethod): void {
     workspace.write({ method })
-    persist(false)
+    persist()
     emit()
     scheduleTranslate()
   }
 
   function setTone(tone: Tone): void {
     workspace.write({ tone })
-    persist(false)
+    persist()
     emit()
     scheduleTranslate()
   }
@@ -274,10 +296,14 @@ export function createSession(deps: SessionDeps = {}): Session {
       source: '',
       translation: '',
       completedTranslation: '',
+      completedSource: '',
+      completedDirection: null,
+      completedMethod: null,
+      completedTone: null,
       translationIsCurrent: true,
       translationStatus: 'idle',
     })
-    persist(true)
+    persist()
     emit()
   }
 
@@ -290,24 +316,44 @@ export function createSession(deps: SessionDeps = {}): Session {
   }
 
   async function checkConnection(): Promise<void> {
+    if (disposed) {
+      return
+    }
+
+    const generation = ++healthGeneration
     healthAbort?.abort()
-    healthAbort = new AbortController()
+    const controller = new AbortController()
+    healthAbort = controller
     workspace.write({ connectionStatus: 'checking' })
     emit()
     try {
-      const status = await inference.checkHealth(healthAbort.signal)
-      if (disposed) {
+      const status = await inference.checkHealth(controller.signal)
+      if (disposed || generation !== healthGeneration) {
         return
       }
       workspace.write({ connectionStatus: status })
       emit()
     } catch (error) {
-      if (disposed || isAbortError(error)) {
+      if (
+        disposed ||
+        generation !== healthGeneration ||
+        isAbortError(error)
+      ) {
         return
       }
       workspace.write({ connectionStatus: 'unavailable' })
       emit()
+    } finally {
+      if (generation === healthGeneration) {
+        healthAbort = undefined
+      }
     }
+  }
+
+  function invalidateHealthCheck(): void {
+    healthGeneration += 1
+    healthAbort?.abort()
+    healthAbort = undefined
   }
 
   function dispose(): void {
@@ -316,11 +362,14 @@ export function createSession(deps: SessionDeps = {}): Session {
     if (debounceTimer !== undefined) {
       clearTimeout(debounceTimer)
     }
-    healthAbort?.abort()
+    invalidateHealthCheck()
     abortTranslation()
   }
 
   void checkConnection()
+  if (workspace.read().translationStatus === 'waiting') {
+    scheduleTranslate()
+  }
 
   return {
     getSnapshot,
@@ -346,16 +395,43 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
   if (loaded === null) {
     return {}
   }
+
+  const direction = resolveDirection(loaded)
+  const hasCompletedTranslation = loaded.completedTranslation !== ''
+  const hasMatchingProvenance =
+    hasCompletedTranslation &&
+    loaded.completedSource === loaded.source &&
+    loaded.completedDirection === direction &&
+    loaded.completedMethod === loaded.method &&
+    loaded.completedTone === loaded.tone
+
+  if (loaded.source === '') {
+    return {
+      ...loaded,
+      direction,
+      translation: '',
+      translationIsCurrent: true,
+      translationStatus: 'idle',
+    }
+  }
+
+  if (hasMatchingProvenance) {
+    return {
+      ...loaded,
+      direction,
+      translation: loaded.completedTranslation,
+      translationIsCurrent: true,
+      translationStatus: 'complete',
+    }
+  }
+
   return {
     ...loaded,
+    direction,
     translation: loaded.completedTranslation,
-    translationIsCurrent: true,
+    translationIsCurrent: false,
     translationStatus:
-      loaded.source === ''
-        ? 'idle'
-        : loaded.completedTranslation === ''
-          ? 'idle'
-          : 'complete',
+      loaded.source.length <= INPUT_LIMIT ? 'waiting' : 'idle',
   }
 }
 
@@ -363,6 +439,10 @@ function workStateFrom(state: WorkspaceState): WorkState {
   return {
     source: state.source,
     completedTranslation: state.completedTranslation,
+    completedSource: state.completedSource,
+    completedDirection: state.completedDirection,
+    completedMethod: state.completedMethod,
+    completedTone: state.completedTone,
     direction: state.direction,
     directionControl: state.directionControl,
     method: state.method,
