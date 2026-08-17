@@ -23,7 +23,7 @@
   font-weight: 400;
   letter-spacing: 0.1em;
   line-height: 16px;
-  color: var(--ink-55);
+  color: var(--color-ink-muted);
   background: none;
   border: none;
   padding: 4px 2px;
@@ -41,7 +41,7 @@ button.modeLabel {
 }
 
 button.modeLabel:hover {
-  color: var(--ink-70);
+  color: var(--color-ink-muted);
 }
 
 .languages {

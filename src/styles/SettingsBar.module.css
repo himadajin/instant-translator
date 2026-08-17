@@ -30,7 +30,7 @@
   font-weight: 400;
   letter-spacing: 0.1em;
   line-height: 16px;
-  color: var(--ink-55);
+  color: var(--color-ink-muted);
   white-space: nowrap;
 }
 
@@ -82,6 +82,15 @@
   background: var(--color-muted-surface);
 }
 
+.toneTrigger[data-selected='true'] {
+  background: var(--color-accent);
+  font-weight: 600;
+}
+
+.toneTrigger[data-selected='true']:hover {
+  background: var(--color-accent);
+}
+
 .tonePopover {
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline);
@@ -105,6 +114,7 @@
   font-weight: 400;
   color: var(--color-ink);
   padding: 8px 10px;
+  min-height: 44px;
   border-radius: var(--radius-sm);
   cursor: pointer;
 }

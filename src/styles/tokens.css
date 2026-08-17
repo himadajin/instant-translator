@@ -10,13 +10,13 @@
   --color-hairline: #ebebeb;
   --color-accent: #ffc799;
 
-  /* Ink mixed with Canvas at decreasing opacity, for hierarchy without new hues. */
-  --ink-90: rgba(23, 23, 23, 0.9);
-  --ink-70: rgba(23, 23, 23, 0.7);
-  --ink-55: rgba(23, 23, 23, 0.55);
-  --ink-40: rgba(23, 23, 23, 0.4);
-  --ink-25: rgba(23, 23, 23, 0.25);
-  --ink-12: rgba(23, 23, 23, 0.12);
+  /*
+   * These are opaque colors so text contrast is not reduced by alpha
+   * compositing over Canvas. Muted text is 5.50:1 against Canvas; the
+   * disabled value is intentionally exempt from the normal-text threshold.
+   */
+  --color-ink-muted: #666666;
+  --color-ink-disabled: #8a8a8a;
 
   --font-sans:
     'Geist Variable', 'Noto Sans JP Variable', -apple-system,

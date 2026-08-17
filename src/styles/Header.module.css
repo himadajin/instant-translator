@@ -36,7 +36,7 @@
   letter-spacing: 0.1em;
   line-height: 16px;
   white-space: nowrap;
-  color: var(--ink-55);
+  color: var(--color-ink-muted);
 }
 
 .status[data-status='unavailable'] {

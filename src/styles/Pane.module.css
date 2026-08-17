@@ -19,7 +19,7 @@
   font-weight: 400;
   letter-spacing: 0.1em;
   line-height: 16px;
-  color: var(--ink-55);
+  color: var(--color-ink-muted);
 }
 
 .paneAction {
@@ -39,7 +39,7 @@
 }
 
 .paneAction:disabled {
-  color: var(--ink-25);
+  color: var(--color-ink-disabled);
   cursor: default;
 }
 
@@ -66,7 +66,7 @@
 }
 
 .textarea::placeholder {
-  color: var(--ink-40);
+  color: var(--color-ink-muted);
 }
 
 .paneFooter {
@@ -80,7 +80,7 @@
   min-width: 0;
   font-family: var(--font-mono);
   font-size: 13px;
-  color: var(--ink-40);
+  color: var(--color-ink-muted);
 }
 
 .charCount[data-near-limit] {
@@ -105,7 +105,7 @@
   margin: 0;
   font-size: 18px;
   line-height: 1.7;
-  color: var(--ink-40);
+  color: var(--color-ink-muted);
 }
 
 .translationText {
@@ -117,7 +117,7 @@
 }
 
 .translationText[data-dimmed='true'] {
-  color: var(--ink-40);
+  color: var(--color-ink-muted);
 }
 
 .errorState {

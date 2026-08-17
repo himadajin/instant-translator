@@ -15,19 +15,18 @@
 
 .dot {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 16px;
+  height: 2px;
   background: var(--color-accent);
-  left: 50%;
-  top: 0;
-  transform: translate(-50%, 0);
-  animation: rail-move-vertical var(--rail-step-ms) linear infinite;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: rail-move-horizontal var(--rail-step-ms) linear infinite;
 }
 
-@keyframes rail-move-vertical {
+@keyframes rail-move-horizontal {
   0% {
-    top: 0%;
+    left: -8px;
     opacity: 0;
   }
   15% {
@@ -37,22 +36,24 @@
     opacity: 1;
   }
   100% {
-    top: 100%;
+    left: calc(100% + 8px);
     opacity: 0;
   }
 }
 
 @media (max-width: 799.98px) {
   .dot {
-    left: 0;
-    top: 50%;
-    transform: translate(0, -50%);
-    animation-name: rail-move-horizontal;
+    width: 2px;
+    height: 16px;
+    left: 50%;
+    top: -8px;
+    transform: translateX(-50%);
+    animation-name: rail-move-vertical;
   }
 
-  @keyframes rail-move-horizontal {
+  @keyframes rail-move-vertical {
     0% {
-      left: 0%;
+      top: -8px;
       opacity: 0;
     }
     15% {
@@ -62,7 +63,7 @@
       opacity: 1;
     }
     100% {
-      left: 100%;
+      top: calc(100% + 8px);
       opacity: 0;
     }
   }
@@ -72,17 +73,17 @@
   .dot {
     animation: none;
     opacity: 1;
-    width: 2px;
-    height: 16px;
+    width: 16px;
+    height: 2px;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
   }
+}
 
-  @media (max-width: 799.98px) {
-    .dot {
-      width: 16px;
-      height: 2px;
-    }
+@media (prefers-reduced-motion: reduce) and (max-width: 799.98px) {
+  .dot {
+    width: 2px;
+    height: 16px;
   }
 }
