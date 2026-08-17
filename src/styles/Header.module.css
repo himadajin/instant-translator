@@ -1,14 +1,11 @@
 .header {
-  height: var(--header-height);
-  min-height: var(--header-height);
+  height: var(--identity-row-height);
+  min-height: var(--identity-row-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding-inline: var(--content-padding-narrow);
-  background: color-mix(in srgb, var(--color-canvas) 85%, transparent);
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--color-hairline);
 }
 
 @media (min-width: 800px) {
@@ -21,7 +18,7 @@
 }
 
 .appName {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
   white-space: nowrap;

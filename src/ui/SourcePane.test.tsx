@@ -81,7 +81,7 @@ describe('SourcePane', () => {
     expect(aboveThreshold.getAttribute('data-near-limit')).toBe('true')
   })
 
-  it('shows supplied over-limit details and the exact required reduction', () => {
+  it('shows the exact over-limit amount', () => {
     renderSource({
       sourceText: 'x',
       sourceLength: 4001,
@@ -93,7 +93,6 @@ describe('SourcePane', () => {
     expect(count.textContent).toContain(
       '原文が 4,000 文字を 1 文字超過しています',
     )
-    expect(count.textContent).toContain('1 文字減らす必要があります')
   })
 
   it('enables CLEAR only for non-empty source and forwards user actions', async () => {

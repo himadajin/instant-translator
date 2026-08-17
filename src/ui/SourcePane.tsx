@@ -54,9 +54,7 @@ export const SourcePane = forwardRef<
         {overLimit ? (
           <span className={styles.charCount} data-over-limit="true">
             原文が {inputLimit.toLocaleString()} 文字を{' '}
-            {(sourceLength - inputLimit).toLocaleString()} 文字超過しています（
-            {(sourceLength - inputLimit).toLocaleString()}{' '}
-            文字減らす必要があります）
+            {(sourceLength - inputLimit).toLocaleString()} 文字超過しています
           </span>
         ) : (
           <span

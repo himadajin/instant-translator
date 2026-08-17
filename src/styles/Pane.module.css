@@ -4,13 +4,22 @@
   min-width: 0;
   min-height: 0;
   height: 100%;
+  background: var(--color-paper);
+  border: 1px solid var(--color-paper-border);
+  border-radius: var(--radius-paper);
+}
+
+/* The paper itself is the input's focus indicator: its border switches to
+   Ink instead of drawing a heavy outline around the textarea (ui.md). */
+.pane:has(.textarea:focus) {
+  border-color: var(--color-ink);
 }
 
 .paneHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 12px 16px 8px;
 }
 
 .metaLabel {
@@ -32,9 +41,9 @@
   letter-spacing: 0.1em;
   line-height: 16px;
   color: var(--color-ink);
-  padding: 8px 4px;
-  min-width: 44px;
-  min-height: 44px;
+  padding: 6px 4px;
+  min-height: 28px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -54,15 +63,7 @@
   font-family: var(--font-sans);
   font-size: 18px;
   line-height: 1.7;
-  /* Margin (rather than padding alone) leaves room for the focus-visible
-     outline + offset so it isn't clipped by the pane column's overflow. */
-  margin-inline: 4px;
-  padding: 0 12px 8px;
-}
-
-.textarea:focus-visible {
-  outline: var(--focus-outline-width) solid var(--color-ink);
-  outline-offset: var(--focus-outline-offset);
+  padding: 0 16px 8px;
 }
 
 .textarea::placeholder {
@@ -70,7 +71,7 @@
 }
 
 .paneFooter {
-  padding: 8px 16px 16px;
+  padding: 8px 16px 12px;
   min-height: 32px;
   display: flex;
   justify-content: flex-end;
@@ -137,19 +138,19 @@
 
 .retry {
   appearance: none;
-  background: var(--color-canvas);
+  background: var(--color-paper);
   border: 1px solid var(--color-ink);
   border-radius: var(--radius-sm);
   color: var(--color-ink);
   font-size: 14px;
   font-weight: 500;
-  padding: 8px 16px;
-  min-height: 44px;
+  padding: 6px 16px;
+  min-height: 32px;
   cursor: pointer;
 }
 
 .retry:hover {
-  background: var(--color-muted-surface);
+  background: var(--color-hover-surface);
 }
 
 .visuallyHidden {

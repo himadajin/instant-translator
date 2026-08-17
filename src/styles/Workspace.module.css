@@ -14,6 +14,7 @@
   margin-inline: auto;
   max-width: var(--content-max-width);
   padding-inline: var(--content-padding-narrow);
+  padding-block: 8px var(--content-padding-narrow);
 }
 
 @media (min-width: 800px) {
@@ -21,6 +22,7 @@
     grid-template-columns: 1fr auto 1fr;
     grid-template-rows: 1fr;
     padding-inline: var(--content-padding);
+    padding-block: 8px var(--content-padding);
   }
 }
 
@@ -28,5 +30,4 @@
 .translationColumn {
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
 }
