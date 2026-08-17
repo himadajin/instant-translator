@@ -10,7 +10,7 @@ Instant Translator は、ローカルで動く `llama.cpp` サーバへ接続し
 
 - Apple Silicon の Mac。
 - 単一利用者での利用。
-- Node.js と npm。
+- Node.js `^20.19.0 || >=22.12.0` と npm。
 - Homebrew（`llama.cpp` の導入に使う）。
 
 ## 1. llama.cpp を導入する

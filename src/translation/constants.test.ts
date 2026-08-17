@@ -27,7 +27,7 @@ describe('parseInferencePort', () => {
       '0',
       '65536',
     ]) {
-      expect(() => parseInferencePort(value)).toThrow(/INFERENCE_PORT/)
+      expect(() => parseInferencePort(value)).toThrow(/VITE_INFERENCE_PORT/)
     }
   })
 })

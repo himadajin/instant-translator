@@ -1,6 +1,6 @@
 # 設定
 
-Instant Translator に設定画面はない。接続先ポートは環境変数 `INFERENCE_PORT` で変えられる。
+Instant Translator に設定画面はない。接続先ポートは環境変数 `VITE_INFERENCE_PORT` で変えられる。
 それ以外の調整は `llama-server` の起動方法である。
 
 ## 接続先
@@ -13,10 +13,10 @@ llama-server -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
 ```
 
 別のポートで `llama-server` を待つ場合は、アプリ側も同じポートにする。
-リポジトリ直下の `.env.example` を `.env` または `.env.local` にコピーし、`INFERENCE_PORT` を書き換える。
+リポジトリ直下の `.env.example` を `.env` または `.env.local` にコピーし、`VITE_INFERENCE_PORT` を書き換える。
 
 ```
-INFERENCE_PORT=8081
+VITE_INFERENCE_PORT=8081
 ```
 
 `llama-server` 側も揃える。
@@ -28,8 +28,8 @@ llama-server --port 8081 -hf LiquidAI/LFM2.5-1.2B-JP-202606-GGUF:Q8_0
 変更を反映するには `npm run dev` を再起動する。
 未設定のときは `8080` を使う。空や整数でない値、`1` から `65535` の範囲外はアプリ起動時に失敗する。
 
-`llama-server` は既定で `Access-Control-Allow-Origin: *` を返すため、
-ブラウザで開いたアプリからそのまま呼び出せる。この用途で CORS のオプションを足す必要はない。
+`llama.cpp` の既定設定はローカル Web アプリから利用できるため、この用途で追加の CORS オプションを
+指定する必要はない。
 
 ## 量子化を選ぶ
 

@@ -4,11 +4,11 @@ export const INPUT_LIMIT = 4000
 
 export const INPUT_WARN_AT = 3200
 
-const DEFAULT_INFERENCE_PORT = 8080
+const DEFAULT_PORT = 8080
 
 export function parseInferencePort(value: string | undefined): number {
   if (value === undefined) {
-    return DEFAULT_INFERENCE_PORT
+    return DEFAULT_PORT
   }
 
   const trimmed = value.trim()
@@ -26,13 +26,13 @@ export function parseInferencePort(value: string | undefined): number {
 
 function invalidInferencePort(value: string): Error {
   return new Error(
-    `INFERENCE_PORT must be an integer from 1 to 65535, got ${JSON.stringify(value)}`,
+    `VITE_INFERENCE_PORT must be an integer from 1 to 65535, got ${JSON.stringify(value)}`,
   )
 }
 
-export const INFERENCE_PORT = parseInferencePort(import.meta.env.INFERENCE_PORT)
+const inferencePort = parseInferencePort(import.meta.env.VITE_INFERENCE_PORT)
 
-export const INFERENCE_BASE_URL = `http://127.0.0.1:${INFERENCE_PORT}`
+export const INFERENCE_BASE_URL = `http://127.0.0.1:${inferencePort}`
 
 export const HEALTH_URL = `${INFERENCE_BASE_URL}/health`
 

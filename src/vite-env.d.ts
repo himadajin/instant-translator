@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly INFERENCE_PORT?: string
+  readonly VITE_INFERENCE_PORT?: string
 }
