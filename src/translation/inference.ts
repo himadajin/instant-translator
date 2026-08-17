@@ -104,7 +104,19 @@ async function* readSseContent(
 
   try {
     while (true) {
-      const { done, value } = await reader.read()
+      let result: ReadableStreamReadResult<Uint8Array>
+      try {
+        result = await reader.read()
+      } catch (error) {
+        if (isAbortError(error)) {
+          throw error
+        }
+        throw new ConnectionError(
+          error instanceof Error ? error.message : 'connection failed',
+        )
+      }
+
+      const { done, value } = result
       if (done) {
         break
       }
@@ -125,13 +137,6 @@ async function* readSseContent(
         }
       }
     }
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error
-    }
-    throw new TranslationError(
-      error instanceof Error ? error.message : 'translation failed',
-    )
   } finally {
     reader.releaseLock()
   }
@@ -154,6 +159,10 @@ function contentFromSseLine(line: string): string | null | undefined {
   try {
     parsed = JSON.parse(data)
   } catch {
+    throw new TranslationError('malformed stream')
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
     throw new TranslationError('malformed stream')
   }
 

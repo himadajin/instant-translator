@@ -57,6 +57,118 @@ describe('Inference', () => {
     expect(chunks).toEqual(['Hel', 'lo'])
   })
 
+  it('treats a stream disconnect after content as a connection error', async () => {
+    const fetchFn = vi.fn(async () => {
+      let firstRead = true
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (firstRead) {
+            firstRead = false
+            controller.enqueue(new TextEncoder().encode(sseChunk('Hello')))
+            return
+          }
+          controller.error(new TypeError('socket closed'))
+        },
+      })
+      return new Response(stream, { status: 200 })
+    })
+    const inference = createInference(fetchFn)
+    const chunks: string[] = []
+
+    const consume = async () => {
+      for await (const chunk of inference.translate(
+        [],
+        new AbortController().signal,
+      )) {
+        chunks.push(chunk)
+      }
+    }
+
+    await expect(consume()).rejects.toBeInstanceOf(ConnectionError)
+    expect(chunks).toEqual(['Hello'])
+  })
+
+  it('treats malformed SSE as a translation error', async () => {
+    const fetchFn = vi.fn(async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: malformed\n\n'))
+          controller.close()
+        },
+      })
+      return new Response(stream, { status: 200 })
+    })
+    const inference = createInference(fetchFn)
+
+    await expect(
+      inference.translate([], new AbortController().signal).next(),
+    ).rejects.toBeInstanceOf(TranslationError)
+  })
+
+  it('treats a null SSE payload as a translation error', async () => {
+    const fetchFn = vi.fn(async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: null\n\n'))
+          controller.close()
+        },
+      })
+      return new Response(stream, { status: 200 })
+    })
+    const inference = createInference(fetchFn)
+
+    await expect(
+      inference.translate([], new AbortController().signal).next(),
+    ).rejects.toBeInstanceOf(TranslationError)
+  })
+
+  it('treats a missing completion body as a translation error', async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 200 }))
+    const inference = createInference(fetchFn)
+
+    await expect(
+      inference.translate([], new AbortController().signal).next(),
+    ).rejects.toBeInstanceOf(TranslationError)
+  })
+
+  it('treats non-string SSE content as a translation error', async () => {
+    const fetchFn = vi.fn(async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(
+              'data: {"choices":[{"delta":{"content":123}}]}\n\n',
+            ),
+          )
+          controller.close()
+        },
+      })
+      return new Response(stream, { status: 200 })
+    })
+    const inference = createInference(fetchFn)
+
+    await expect(
+      inference.translate([], new AbortController().signal).next(),
+    ).rejects.toBeInstanceOf(TranslationError)
+  })
+
+  it('rethrows an AbortError from the stream unchanged', async () => {
+    const abortError = new DOMException('The operation was aborted', 'AbortError')
+    const fetchFn = vi.fn(async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(abortError)
+        },
+      })
+      return new Response(stream, { status: 200 })
+    })
+    const inference = createInference(fetchFn)
+
+    await expect(
+      inference.translate([], new AbortController().signal).next(),
+    ).rejects.toBe(abortError)
+  })
+
   it('treats a failed fetch as a connection error', async () => {
     const fetchFn = vi.fn(async () => {
       throw new TypeError('Failed to fetch')
