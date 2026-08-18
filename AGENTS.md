@@ -1,0 +1,36 @@
+# Instant Translator
+
+Instant Translator is a quick response text translation web app.
+
+## Engineering Principles
+
+- Do not preserve backwards compatibility.
+  Remove obsolete paths instead of adding compatibility layers, migrations.
+- Choose the simplest implementation that fully meets the current requirements.
+  Avoid speculative abstractions, configuration, and indirection.
+- Keep components modular and concerns clearly separated.
+- Make architecture decisions for the long term.
+  Do not accept stopgap that only works for now and is meant to be replaced later.
+
+## Docs and sources of truth
+
+- `docs/` describes current behavior only — no history, no plans.
+- `docs/user/` — installation, configuration, usage
+- `docs/internal/specs/` — confirmed behavior specs, component boundaries
+- When a change alters documented behavior, update the affected doc in the same PR.
+- If docs and code disagree, do not assume either side is correct — report the mismatch and
+  confirm which one to fix.
+
+## Commits, issues, and pull requests
+Issue titles, PR titles, and commit messages share the same format.
+Each is a concise English one-liner following Conventional Commits,
+e.g. `feat(translation): add automatic detection`, `fix(workspace): restore saved work`.
+A change is titled once.
+The issue names it first,
+and the PR reuses that title as the squash-merge commit message.
+Bodies may be written in English or Japanese.
+
+Issue bodies must be self-contained.
+Open with a paragraph or two stating the current state, the change, and the reason.
+Avoid vocabulary that only made sense in the conversation that spawned the issue.
+When referencing other issues, write `#N` plus a short description.

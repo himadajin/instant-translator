@@ -1,0 +1,42 @@
+.header {
+  height: var(--identity-row-height);
+  min-height: var(--identity-row-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-inline: var(--content-padding-narrow);
+}
+
+@media (min-width: 800px) {
+  .header {
+    padding-inline: max(
+      var(--content-padding),
+      calc((100% - var(--content-max-width)) / 2)
+    );
+  }
+}
+
+.appName {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  line-height: 16px;
+  white-space: nowrap;
+  color: var(--color-ink-muted);
+}
+
+.status[data-status='unavailable'] {
+  color: var(--color-ink);
+  font-weight: 500;
+}
