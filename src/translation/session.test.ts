@@ -75,8 +75,10 @@ type CompletionsCall = {
 }
 
 function sourceFrom(content: string): string {
-  const [, ...rest] = content.split('\n\n')
-  return rest.join('\n\n')
+  const match = /^\[Source Text\]\n([\s\S]*)\n\n\[Translation Tasks\]\n/.exec(
+    content,
+  )
+  return match?.[1] ?? ''
 }
 
 function requestedSource(call: CompletionsCall | undefined): string {
