@@ -1,20 +1,15 @@
+import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import IconButton from '@mui/material/IconButton'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
-import ToggleButton from '@mui/material/ToggleButton'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
-import {
-  TONE_OPTIONS,
-  type Tone,
-  type TranslationDirection,
-  type TranslationMethod,
-} from './types'
+import { TONE_OPTIONS, type Tone, type TranslationDirection } from './types'
 
 const LANGUAGE_NAMES: Record<
   TranslationDirection,
@@ -29,8 +24,8 @@ export function Toolbar({
   isDirectionFixed,
   onSwapDirection,
   onReleaseFixedDirection,
-  translationMethod,
-  onTranslationMethodChange,
+  idiomatic,
+  onIdiomaticChange,
   tone,
   onToneChange,
 }: {
@@ -38,8 +33,8 @@ export function Toolbar({
   isDirectionFixed: boolean
   onSwapDirection: () => void
   onReleaseFixedDirection: () => void
-  translationMethod: TranslationMethod
-  onTranslationMethodChange: (method: TranslationMethod) => void
+  idiomatic: boolean
+  onIdiomaticChange: (idiomatic: boolean) => void
   tone: Tone
   onToneChange: (tone: Tone) => void
 }) {
@@ -82,19 +77,17 @@ export function Toolbar({
       </Stack>
 
       <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={translationMethod}
-          onChange={(_event, value: TranslationMethod | null) => {
-            if (value !== null) {
-              onTranslationMethodChange(value)
-            }
-          }}
-        >
-          <ToggleButton value="standard">標準翻訳</ToggleButton>
-          <ToggleButton value="idiomatic">意訳</ToggleButton>
-        </ToggleButtonGroup>
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={idiomatic}
+              onChange={(event) => onIdiomaticChange(event.target.checked)}
+            />
+          }
+          label="意訳"
+          sx={{ m: 0 }}
+        />
 
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel id="tone-select-label">口調</InputLabel>

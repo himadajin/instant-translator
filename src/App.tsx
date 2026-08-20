@@ -18,7 +18,7 @@ const INITIAL_SNAPSHOT: WorkspaceSnapshot = {
   translationIsCurrent: true,
   direction: 'ja-to-en',
   directionControl: 'auto',
-  method: 'standard',
+  idiomatic: false,
   tone: 'standard',
   translationStatus: 'idle',
   connectionStatus: 'checking',
@@ -72,7 +72,7 @@ function toWorkspaceView(snapshot: WorkspaceSnapshot) {
     inputWarnAt: INPUT_WARN_AT,
     direction: mapDirection(snapshot.direction),
     isDirectionFixed: snapshot.directionControl === 'fixed',
-    translationMethod: snapshot.method,
+    idiomatic: snapshot.idiomatic,
     tone: snapshot.tone,
     translationStatus,
     translatedText,
@@ -105,8 +105,8 @@ export default function App() {
       onClear={() => sessionRef.current?.clear()}
       onSwapDirection={() => sessionRef.current?.swapDirection()}
       onReleaseFixedDirection={() => sessionRef.current?.unlockDirection()}
-      onTranslationMethodChange={(method) =>
-        sessionRef.current?.setMethod(method)
+      onIdiomaticChange={(idiomatic) =>
+        sessionRef.current?.setIdiomatic(idiomatic)
       }
       onToneChange={(tone) => sessionRef.current?.setTone(tone)}
       onCopy={async () => {

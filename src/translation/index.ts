@@ -12,7 +12,6 @@ export type {
   DirectionControl,
   Tone,
   TranslationDirection,
-  TranslationMethod,
   TranslationStatus,
   WorkspaceSnapshot,
 } from './types'

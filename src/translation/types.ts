@@ -2,8 +2,6 @@ export type TranslationDirection = 'ja-to-en' | 'en-to-ja'
 
 export type DirectionControl = 'auto' | 'fixed'
 
-export type TranslationMethod = 'standard' | 'idiomatic'
-
 export type Tone = 'standard' | 'chat' | 'technical' | 'casual'
 
 export type TranslationStatus =
@@ -28,11 +26,11 @@ export type WorkState = {
   completedTranslation: string
   completedSource: string
   completedDirection: TranslationDirection | null
-  completedMethod: TranslationMethod | null
+  completedIdiomatic: boolean | null
   completedTone: Tone | null
   direction: TranslationDirection
   directionControl: DirectionControl
-  method: TranslationMethod
+  idiomatic: boolean
   tone: Tone
 }
 
@@ -49,7 +47,7 @@ export type WorkspaceSnapshot = {
   translationIsCurrent: boolean
   direction: TranslationDirection
   directionControl: DirectionControl
-  method: TranslationMethod
+  idiomatic: boolean
   tone: Tone
   translationStatus: TranslationStatus
   connectionStatus: ConnectionStatus

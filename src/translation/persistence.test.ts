@@ -23,11 +23,11 @@ const sample: WorkState = {
   completedTranslation: 'Hello',
   completedSource: 'こんにちは',
   completedDirection: 'ja-to-en',
-  completedMethod: 'standard',
+  completedIdiomatic: false,
   completedTone: 'chat',
   direction: 'ja-to-en',
   directionControl: 'auto',
-  method: 'standard',
+  idiomatic: false,
   tone: 'chat',
 }
 
@@ -59,7 +59,7 @@ describe('Persistence', () => {
         completedTranslation: sample.completedTranslation,
         direction: sample.direction,
         directionControl: sample.directionControl,
-        method: sample.method,
+        method: 'standard',
         tone: sample.tone,
       }),
     )
@@ -74,11 +74,11 @@ describe('Persistence', () => {
       completedTranslation: '',
       completedSource: '',
       completedDirection: null,
-      completedMethod: null,
+      completedIdiomatic: null,
       completedTone: null,
       direction: 'ja-to-en',
       directionControl: 'auto',
-      method: 'standard',
+      idiomatic: false,
       tone: 'standard',
     }
     persistence.save(empty)

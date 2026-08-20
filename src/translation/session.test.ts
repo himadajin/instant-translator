@@ -490,7 +490,7 @@ describe('Session', () => {
     await flush()
 
     session.setSource(japaneseSource)
-    session.setMethod('idiomatic')
+    session.setIdiomatic(true)
     session.setTone('technical')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
@@ -501,7 +501,7 @@ describe('Session', () => {
     const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? '{}') as WorkState
     expect(saved.source).toBe(japaneseSource)
     expect(saved.completedTranslation).toBe('Hello')
-    expect(saved.method).toBe('idiomatic')
+    expect(saved.idiomatic).toBe(true)
     expect(saved.tone).toBe('technical')
     session.dispose()
 
@@ -512,7 +512,7 @@ describe('Session', () => {
     await flush()
     expect(restored.getSnapshot().source).toBe(japaneseSource)
     expect(restored.getSnapshot().translation).toBe('Hello')
-    expect(restored.getSnapshot().method).toBe('idiomatic')
+    expect(restored.getSnapshot().idiomatic).toBe(true)
     expect(restored.getSnapshot().tone).toBe('technical')
     expect(restored.getSnapshot().translationStatus).toBe('complete')
     restored.dispose()
@@ -530,7 +530,7 @@ describe('Session', () => {
     ) as WorkState
     expect(cleared.source).toBe('')
     expect(cleared.completedTranslation).toBe('')
-    expect(cleared.method).toBe('idiomatic')
+    expect(cleared.idiomatic).toBe(true)
     expect(cleared.tone).toBe('technical')
     live.dispose()
   })
@@ -645,13 +645,13 @@ describe('Session', () => {
     session.dispose()
   })
 
-  it('starts with standard method and standard tone', async () => {
+  it('starts with idiomatic disabled and standard tone', async () => {
     const session = createSession({
       fetch: createFetchHarness().fetchFn,
       storage: memoryStorage(),
     })
     await flush()
-    expect(session.getSnapshot().method).toBe('standard')
+    expect(session.getSnapshot().idiomatic).toBe(false)
     expect(session.getSnapshot().tone).toBe('standard')
     expect(session.getSnapshot().directionControl).toBe('auto')
     expect(session.getSnapshot().direction).toBe('ja-to-en')

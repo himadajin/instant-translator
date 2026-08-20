@@ -2,14 +2,13 @@
  * Shared types for the translation workspace UI.
  *
  * These mirror the domain language defined in `CONTEXT.md` and the component
- * boundaries in `docs/internal/specs/components.md`. Translation method and
- * tone are imported from the translation domain so the UI does not redefine
- * their values.
+ * boundaries in `docs/internal/specs/components.md`. Tone is imported from
+ * the translation domain so the UI does not redefine its values.
  */
 
-import type { Tone, TranslationMethod } from '../translation'
+import type { Tone } from '../translation'
 
-export type { Tone, TranslationMethod }
+export type { Tone }
 
 export type ConnectionStatus = 'ready' | 'checking' | 'unavailable'
 
@@ -64,8 +63,8 @@ export interface WorkspaceProps {
   /** Invoked by pressing the `FIXED` label: returns to auto-detection. */
   onReleaseFixedDirection: () => void
 
-  translationMethod: TranslationMethod
-  onTranslationMethodChange: (method: TranslationMethod) => void
+  idiomatic: boolean
+  onIdiomaticChange: (idiomatic: boolean) => void
 
   tone: Tone
   onToneChange: (tone: Tone) => void

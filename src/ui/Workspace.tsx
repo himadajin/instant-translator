@@ -28,8 +28,8 @@ export function Workspace({
   isDirectionFixed,
   onSwapDirection,
   onReleaseFixedDirection,
-  translationMethod,
-  onTranslationMethodChange,
+  idiomatic,
+  onIdiomaticChange,
   tone,
   onToneChange,
   translationStatus,
@@ -56,8 +56,8 @@ export function Workspace({
           isDirectionFixed={isDirectionFixed}
           onSwapDirection={onSwapDirection}
           onReleaseFixedDirection={onReleaseFixedDirection}
-          translationMethod={translationMethod}
-          onTranslationMethodChange={onTranslationMethodChange}
+          idiomatic={idiomatic}
+          onIdiomaticChange={onIdiomaticChange}
           tone={tone}
           onToneChange={onToneChange}
         />

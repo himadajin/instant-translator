@@ -11,11 +11,12 @@ afterEach(cleanup)
 function renderToolbar({
   tone = 'standard' as Tone,
   isDirectionFixed = false,
+  idiomatic = false,
 } = {}) {
   const onToneChange = vi.fn()
   const onSwapDirection = vi.fn()
   const onReleaseFixedDirection = vi.fn()
-  const onTranslationMethodChange = vi.fn()
+  const onIdiomaticChange = vi.fn()
 
   render(
     <Toolbar
@@ -23,8 +24,8 @@ function renderToolbar({
       isDirectionFixed={isDirectionFixed}
       onSwapDirection={onSwapDirection}
       onReleaseFixedDirection={onReleaseFixedDirection}
-      translationMethod="standard"
-      onTranslationMethodChange={onTranslationMethodChange}
+      idiomatic={idiomatic}
+      onIdiomaticChange={onIdiomaticChange}
       tone={tone}
       onToneChange={onToneChange}
     />,
@@ -34,7 +35,7 @@ function renderToolbar({
     onToneChange,
     onSwapDirection,
     onReleaseFixedDirection,
-    onTranslationMethodChange,
+    onIdiomaticChange,
     toneTrigger: screen.getByRole('combobox', { name: '口調' }),
   }
 }
@@ -71,27 +72,27 @@ describe('Toolbar direction group', () => {
   })
 })
 
-describe('Toolbar translation method', () => {
-  it('marks the current method pressed and forwards a change', async () => {
+describe('Toolbar idiomatic option', () => {
+  it('starts unchecked and enables idiomatic translation', async () => {
     const user = userEvent.setup()
-    const { onTranslationMethodChange } = renderToolbar()
+    const { onIdiomaticChange } = renderToolbar()
 
-    const standard = screen.getByRole('button', { name: '標準翻訳' })
-    const idiomatic = screen.getByRole('button', { name: '意訳' })
-    expect(standard.getAttribute('aria-pressed')).toBe('true')
-    expect(idiomatic.getAttribute('aria-pressed')).toBe('false')
+    const idiomatic = screen.getByRole('checkbox', { name: '意訳' })
+    expect((idiomatic as HTMLInputElement).checked).toBe(false)
 
     await user.click(idiomatic)
-    expect(onTranslationMethodChange).toHaveBeenCalledTimes(1)
-    expect(onTranslationMethodChange).toHaveBeenCalledWith('idiomatic')
+    expect(onIdiomaticChange).toHaveBeenCalledTimes(1)
+    expect(onIdiomaticChange).toHaveBeenCalledWith(true)
   })
 
-  it('ignores a click on the already selected method', async () => {
+  it('shows the saved option and disables it when unchecked', async () => {
     const user = userEvent.setup()
-    const { onTranslationMethodChange } = renderToolbar()
+    const { onIdiomaticChange } = renderToolbar({ idiomatic: true })
 
-    await user.click(screen.getByRole('button', { name: '標準翻訳' }))
-    expect(onTranslationMethodChange).not.toHaveBeenCalled()
+    const idiomatic = screen.getByRole('checkbox', { name: '意訳' })
+    expect((idiomatic as HTMLInputElement).checked).toBe(true)
+    await user.click(idiomatic)
+    expect(onIdiomaticChange).toHaveBeenCalledWith(false)
   })
 })
 

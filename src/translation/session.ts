@@ -14,7 +14,6 @@ import type {
   KeyValueStorage,
   Tone,
   TranslationDirection,
-  TranslationMethod,
   WorkState,
   WorkspaceSnapshot,
   WorkspaceState,
@@ -33,7 +32,7 @@ export type Session = {
   setSource(source: string): void
   swapDirection(): void
   unlockDirection(): void
-  setMethod(method: TranslationMethod): void
+  setIdiomatic(idiomatic: boolean): void
   setTone(tone: Tone): void
   clear(): void
   retry(): void
@@ -138,7 +137,7 @@ export function createSession(deps: SessionDeps = {}): Session {
     const messages = buildMessages({
       source: current.source,
       direction,
-      method: current.method,
+      idiomatic: current.idiomatic,
       tone: current.tone,
     })
 
@@ -186,7 +185,7 @@ export function createSession(deps: SessionDeps = {}): Session {
         completedTranslation: completed.translation,
         completedSource: completed.source,
         completedDirection: direction,
-        completedMethod: completed.method,
+        completedIdiomatic: completed.idiomatic,
         completedTone: completed.tone,
         connectionStatus: 'ready',
       })
@@ -222,7 +221,7 @@ export function createSession(deps: SessionDeps = {}): Session {
         completedTranslation: '',
         completedSource: '',
         completedDirection: null,
-        completedMethod: null,
+        completedIdiomatic: null,
         completedTone: null,
         translationIsCurrent: true,
         translationStatus: 'idle',
@@ -273,8 +272,8 @@ export function createSession(deps: SessionDeps = {}): Session {
     scheduleTranslate()
   }
 
-  function setMethod(method: TranslationMethod): void {
-    workspace.write({ method })
+  function setIdiomatic(idiomatic: boolean): void {
+    workspace.write({ idiomatic })
     persist()
     emit()
     scheduleTranslate()
@@ -299,7 +298,7 @@ export function createSession(deps: SessionDeps = {}): Session {
       completedTranslation: '',
       completedSource: '',
       completedDirection: null,
-      completedMethod: null,
+      completedIdiomatic: null,
       completedTone: null,
       translationIsCurrent: true,
       translationStatus: 'idle',
@@ -383,7 +382,7 @@ export function createSession(deps: SessionDeps = {}): Session {
     setSource,
     swapDirection,
     unlockDirection,
-    setMethod,
+    setIdiomatic,
     setTone,
     clear,
     retry,
@@ -403,7 +402,7 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
     hasCompletedTranslation &&
     loaded.completedSource === loaded.source &&
     loaded.completedDirection === direction &&
-    loaded.completedMethod === loaded.method &&
+    loaded.completedIdiomatic === loaded.idiomatic &&
     loaded.completedTone === loaded.tone
 
   if (loaded.source === '') {
@@ -442,11 +441,11 @@ function workStateFrom(state: WorkspaceState): WorkState {
     completedTranslation: state.completedTranslation,
     completedSource: state.completedSource,
     completedDirection: state.completedDirection,
-    completedMethod: state.completedMethod,
+    completedIdiomatic: state.completedIdiomatic,
     completedTone: state.completedTone,
     direction: state.direction,
     directionControl: state.directionControl,
-    method: state.method,
+    idiomatic: state.idiomatic,
     tone: state.tone,
   }
 }

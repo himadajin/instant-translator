@@ -1,9 +1,4 @@
-import type {
-  ChatMessage,
-  Tone,
-  TranslationDirection,
-  TranslationMethod,
-} from './types'
+import type { ChatMessage, Tone, TranslationDirection } from './types'
 
 // Hy-MT2 official "Personalization" template: the source text comes first
 // under a [Source Text] label so instruction-like sentences inside it are
@@ -11,13 +6,18 @@ import type {
 export function buildMessages(input: {
   source: string
   direction: TranslationDirection
-  method: TranslationMethod
+  idiomatic: boolean
   tone: Tone
 }): ChatMessage[] {
   const targetLanguage = input.direction === 'ja-to-en' ? 'English' : 'Japanese'
 
   const tasks = [
-    methodTask(input.method, targetLanguage),
+    `Write natural ${targetLanguage} that preserves the source's meaning, information, and nuance.`,
+    ...(input.idiomatic
+      ? [
+          `Polish the ${targetLanguage} while keeping the author's intent and factual relations, turning incomplete or messy wording into well-formed writing.`,
+        ]
+      : []),
     toneTask(input.tone),
     'Do not add facts, claims, emotions, or proper nouns that are not in the source.',
     'Only output the translated result without any additional explanation.',
@@ -33,18 +33,6 @@ export function buildMessages(input: {
   ].join('\n')
 
   return [{ role: 'user', content }]
-}
-
-function methodTask(
-  method: TranslationMethod,
-  targetLanguage: string,
-): string {
-  switch (method) {
-    case 'standard':
-      return `Write natural ${targetLanguage} that preserves the source's meaning, information, and nuance.`
-    case 'idiomatic':
-      return `Write polished ${targetLanguage} that keeps the author's intent and factual relations while turning incomplete or messy wording into well-formed writing.`
-  }
 }
 
 function toneTask(tone: Tone): string {
