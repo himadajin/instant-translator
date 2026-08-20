@@ -35,6 +35,14 @@ function isWorkState(value: unknown): value is WorkState {
   const completedDirection = record.completedDirection
   const completedIdiomatic = record.completedIdiomatic
   const completedTone = record.completedTone
+  const hasValidLanguageSelection =
+    (record.sourceLanguage === 'auto' ||
+      record.sourceLanguage === 'japanese' ||
+      record.sourceLanguage === 'english') &&
+    (record.targetLanguage === 'japanese' ||
+      record.targetLanguage === 'english') &&
+    (record.sourceLanguage === 'auto' ||
+      record.sourceLanguage !== record.targetLanguage)
 
   const hasNoCompletedTranslation =
     completedTranslation === '' &&
@@ -57,9 +65,7 @@ function isWorkState(value: unknown): value is WorkState {
   return (
     typeof record.source === 'string' &&
     (hasNoCompletedTranslation || hasCompletedTranslation) &&
-    (record.direction === 'ja-to-en' || record.direction === 'en-to-ja') &&
-    (record.directionControl === 'auto' ||
-      record.directionControl === 'fixed') &&
+    hasValidLanguageSelection &&
     typeof record.idiomatic === 'boolean' &&
     (record.tone === 'standard' ||
       record.tone === 'chat' ||

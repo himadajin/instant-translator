@@ -10,8 +10,9 @@ import { createPersistence } from './persistence'
 import { buildMessages } from './prompts'
 import { countGraphemes } from './graphemes'
 import type {
-  DirectionControl,
   KeyValueStorage,
+  Language,
+  SourceLanguage,
   Tone,
   TranslationDirection,
   WorkState,
@@ -30,8 +31,8 @@ export type Session = {
   getSnapshot(): WorkspaceSnapshot
   subscribe(listener: (snapshot: WorkspaceSnapshot) => void): () => void
   setSource(source: string): void
-  swapDirection(): void
-  unlockDirection(): void
+  setSourceLanguage(language: SourceLanguage): void
+  setTargetLanguage(language: Language): void
   setIdiomatic(idiomatic: boolean): void
   setTone(tone: Tone): void
   clear(): void
@@ -70,14 +71,6 @@ export function createSession(deps: SessionDeps = {}): Session {
     persistence.save(workStateFrom(workspace.read()))
   }
 
-  function applyDirectionFromSource(): void {
-    const state = workspace.read()
-    if (state.directionControl === 'fixed' || state.source === '') {
-      return
-    }
-    workspace.write({ direction: resolveDirection(state) })
-  }
-
   function scheduleTranslate(): void {
     if (debounceTimer !== undefined) {
       clearTimeout(debounceTimer)
@@ -88,6 +81,16 @@ export function createSession(deps: SessionDeps = {}): Session {
 
     const state = workspace.read()
     if (state.source === '' || countGraphemes(state.source) > INPUT_LIMIT) {
+      return
+    }
+
+    const resolution = resolveDirection(state)
+    if (resolution.direction === null) {
+      workspace.write({
+        translationStatus: 'language-conflict',
+        translationIsCurrent: false,
+      })
+      emit()
       return
     }
 
@@ -121,9 +124,17 @@ export function createSession(deps: SessionDeps = {}): Session {
 
     invalidateHealthCheck()
 
-    const direction = resolveDirection(state)
+    const resolution = resolveDirection(state)
+    if (resolution.direction === null) {
+      workspace.write({
+        translationStatus: 'language-conflict',
+        translationIsCurrent: false,
+      })
+      emit()
+      return
+    }
+    const direction = resolution.direction
     workspace.write({
-      direction,
       translationStatus: 'translating',
       translationIsCurrent: false,
     })
@@ -231,8 +242,6 @@ export function createSession(deps: SessionDeps = {}): Session {
       return
     }
 
-    applyDirectionFromSource()
-
     if (countGraphemes(source) > INPUT_LIMIT) {
       if (debounceTimer !== undefined) {
         clearTimeout(debounceTimer)
@@ -252,21 +261,23 @@ export function createSession(deps: SessionDeps = {}): Session {
     scheduleTranslate()
   }
 
-  function swapDirection(): void {
-    const next: TranslationDirection =
-      workspace.read().direction === 'ja-to-en' ? 'en-to-ja' : 'ja-to-en'
-    workspace.write({
-      direction: next,
-      directionControl: 'fixed',
-    })
+  function setSourceLanguage(language: SourceLanguage): void {
+    const state = workspace.read()
+    if (language !== 'auto' && language === state.targetLanguage) {
+      return
+    }
+    workspace.write({ sourceLanguage: language })
     persist()
     emit()
     scheduleTranslate()
   }
 
-  function unlockDirection(): void {
-    workspace.write({ directionControl: 'auto' })
-    applyDirectionFromSource()
+  function setTargetLanguage(language: Language): void {
+    const state = workspace.read()
+    if (state.sourceLanguage !== 'auto' && state.sourceLanguage === language) {
+      return
+    }
+    workspace.write({ targetLanguage: language })
     persist()
     emit()
     scheduleTranslate()
@@ -334,11 +345,7 @@ export function createSession(deps: SessionDeps = {}): Session {
       workspace.write({ connectionStatus: status })
       emit()
     } catch (error) {
-      if (
-        disposed ||
-        generation !== healthGeneration ||
-        isAbortError(error)
-      ) {
+      if (disposed || generation !== healthGeneration || isAbortError(error)) {
         return
       }
       workspace.write({ connectionStatus: 'unavailable' })
@@ -380,8 +387,8 @@ export function createSession(deps: SessionDeps = {}): Session {
       }
     },
     setSource,
-    swapDirection,
-    unlockDirection,
+    setSourceLanguage,
+    setTargetLanguage,
     setIdiomatic,
     setTone,
     clear,
@@ -396,11 +403,13 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
     return {}
   }
 
-  const direction = resolveDirection(loaded)
+  const resolution = resolveDirection(loaded)
+  const direction = resolution.direction
   const hasCompletedTranslation = loaded.completedTranslation !== ''
   const hasMatchingProvenance =
     hasCompletedTranslation &&
     loaded.completedSource === loaded.source &&
+    direction !== null &&
     loaded.completedDirection === direction &&
     loaded.completedIdiomatic === loaded.idiomatic &&
     loaded.completedTone === loaded.tone
@@ -408,7 +417,6 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
   if (loaded.source === '') {
     return {
       ...loaded,
-      direction,
       translation: '',
       translationIsCurrent: true,
       translationStatus: 'idle',
@@ -418,7 +426,6 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
   if (hasMatchingProvenance) {
     return {
       ...loaded,
-      direction,
       translation: loaded.completedTranslation,
       translationIsCurrent: true,
       translationStatus: 'complete',
@@ -427,11 +434,14 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
 
   return {
     ...loaded,
-    direction,
     translation: loaded.completedTranslation,
     translationIsCurrent: false,
     translationStatus:
-      countGraphemes(loaded.source) <= INPUT_LIMIT ? 'waiting' : 'idle',
+      countGraphemes(loaded.source) > INPUT_LIMIT
+        ? 'idle'
+        : direction === null
+          ? 'language-conflict'
+          : 'waiting',
   }
 }
 
@@ -443,8 +453,8 @@ function workStateFrom(state: WorkspaceState): WorkState {
     completedDirection: state.completedDirection,
     completedIdiomatic: state.completedIdiomatic,
     completedTone: state.completedTone,
-    direction: state.direction,
-    directionControl: state.directionControl,
+    sourceLanguage: state.sourceLanguage,
+    targetLanguage: state.targetLanguage,
     idiomatic: state.idiomatic,
     tone: state.tone,
   }
@@ -452,18 +462,27 @@ function workStateFrom(state: WorkspaceState): WorkState {
 
 function resolveDirection(state: {
   source: string
-  direction: TranslationDirection
-  directionControl: DirectionControl
-}): TranslationDirection {
-  if (state.directionControl === 'fixed') {
-    return state.direction
+  sourceLanguage: SourceLanguage
+  targetLanguage: Language
+}): { direction: TranslationDirection | null } {
+  const sourceLanguage =
+    state.sourceLanguage === 'auto'
+      ? detectLanguage(state.source)
+      : state.sourceLanguage
+
+  if (sourceLanguage === state.targetLanguage) {
+    return { direction: null }
   }
-  const detected = detectLanguage(state.source)
-  if (detected === 'japanese') {
-    return 'ja-to-en'
+  if (sourceLanguage === 'japanese') {
+    return { direction: 'ja-to-en' }
   }
-  if (detected === 'english') {
-    return 'en-to-ja'
+  if (sourceLanguage === 'english') {
+    return { direction: 'en-to-ja' }
   }
-  return state.direction
+
+  // With the currently supported pair, an ambiguous automatic detection can
+  // safely fall back to the only source language different from the target.
+  return {
+    direction: state.targetLanguage === 'english' ? 'ja-to-en' : 'en-to-ja',
+  }
 }

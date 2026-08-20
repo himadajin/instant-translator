@@ -9,7 +9,9 @@ export {
 } from './constants'
 export type {
   ConnectionStatus,
-  DirectionControl,
+  DetectedLanguage,
+  Language,
+  SourceLanguage,
   Tone,
   TranslationDirection,
   TranslationStatus,

@@ -2,13 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import InputLabel from '@mui/material/InputLabel'
 import LinearProgress from '@mui/material/LinearProgress'
+import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
+import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { visuallyHidden } from '@mui/utils'
-import type { TranslationStatus } from './types'
+import { LANGUAGE_NAMES, TARGET_LANGUAGE_OPTIONS } from './languages'
+import { TONE_OPTIONS } from './types'
+import type {
+  DetectedLanguage,
+  Language,
+  SourceLanguage,
+  Tone,
+  TranslationStatus,
+} from './types'
 import { BODY_TEXT_SX } from './bodyText'
 
 const COPIED_LABEL_DURATION_MS = 2000
@@ -30,6 +44,14 @@ export function TranslationPane({
   translatedText,
   previousTranslatedText,
   inputLimit,
+  sourceLanguage,
+  targetLanguage,
+  detectedLanguage,
+  onTargetLanguageChange,
+  idiomatic,
+  onIdiomaticChange,
+  tone,
+  onToneChange,
   onCopy,
   onRetry,
 }: {
@@ -37,6 +59,14 @@ export function TranslationPane({
   translatedText: string
   previousTranslatedText?: string
   inputLimit: number
+  sourceLanguage: SourceLanguage
+  targetLanguage: Language
+  detectedLanguage: DetectedLanguage
+  onTargetLanguageChange: (language: Language) => void
+  idiomatic: boolean
+  onIdiomaticChange: (idiomatic: boolean) => void
+  tone: Tone
+  onToneChange: (tone: Tone) => void
   onCopy: () => void | Promise<void>
   onRetry: () => void
 }) {
@@ -51,6 +81,10 @@ export function TranslationPane({
 
   const isTranslating =
     translationStatus === 'pending' || translationStatus === 'streaming'
+  const conflictMessage =
+    translationStatus === 'languageConflict' && detectedLanguage !== 'ambiguous'
+      ? `原文は${LANGUAGE_NAMES[detectedLanguage]}として検出されました。別の訳文言語を選択してください。`
+      : ''
 
   const handleCopy = async () => {
     try {
@@ -85,9 +119,9 @@ export function TranslationPane({
 
       <Stack
         direction="row"
+        spacing={1}
         sx={{
           alignItems: 'center',
-          justifyContent: 'space-between',
           px: 2,
           pt: 2,
         }}
@@ -95,14 +129,74 @@ export function TranslationPane({
         <Typography variant="overline" color="text.secondary">
           訳文
         </Typography>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <Select
+            value={targetLanguage}
+            inputProps={{ 'aria-label': '訳文の言語' }}
+            onChange={(event) =>
+              onTargetLanguageChange(event.target.value as Language)
+            }
+          >
+            {TARGET_LANGUAGE_OPTIONS.map((option) => (
+              <MenuItem
+                key={option.value}
+                value={option.value}
+                disabled={sourceLanguage === option.value}
+              >
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Button
           size="small"
           startIcon={<ContentCopyIcon fontSize="small" />}
           onClick={handleCopy}
           disabled={translationStatus !== 'done'}
+          sx={{ ml: 'auto' }}
         >
           {isCopied ? 'コピーしました' : 'コピー'}
         </Button>
+      </Stack>
+
+      <Stack
+        direction="row"
+        useFlexGap
+        spacing={2}
+        sx={{
+          minHeight: 44,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          px: 2,
+          py: 0.5,
+        }}
+      >
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={idiomatic}
+              onChange={(event) => onIdiomaticChange(event.target.checked)}
+            />
+          }
+          label="意訳"
+          sx={{ m: 0 }}
+        />
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="tone-select-label">口調</InputLabel>
+          <Select
+            labelId="tone-select-label"
+            label="口調"
+            value={tone}
+            onChange={(event) => onToneChange(event.target.value as Tone)}
+          >
+            {TONE_OPTIONS.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Stack>
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pb: 2 }}>
@@ -111,12 +205,18 @@ export function TranslationPane({
           translatedText,
           previousTranslatedText,
           inputLimit,
+          conflictMessage,
           onRetry,
         })}
       </Box>
 
-      <Box component="span" role="status" aria-live="polite" sx={visuallyHidden}>
-        {STATUS_ANNOUNCEMENT[translationStatus] ?? ''}
+      <Box
+        component="span"
+        role="status"
+        aria-live="polite"
+        sx={visuallyHidden}
+      >
+        {conflictMessage || STATUS_ANNOUNCEMENT[translationStatus] || ''}
       </Box>
     </Paper>
   )
@@ -127,12 +227,14 @@ function renderBody({
   translatedText,
   previousTranslatedText,
   inputLimit,
+  conflictMessage,
   onRetry,
 }: {
   translationStatus: TranslationStatus
   translatedText: string
   previousTranslatedText?: string
   inputLimit: number
+  conflictMessage: string
   onRetry: () => void
 }) {
   const retryAction = (
@@ -177,5 +279,7 @@ function renderBody({
           原文が {inputLimit.toLocaleString()} 文字を超えています
         </Typography>
       )
+    case 'languageConflict':
+      return <Alert severity="warning">{conflictMessage}</Alert>
   }
 }

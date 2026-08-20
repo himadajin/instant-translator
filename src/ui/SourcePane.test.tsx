@@ -17,6 +17,10 @@ function renderSource(
     overLimit: false,
     inputLimit: 4000,
     inputWarnAt: 3200,
+    sourceLanguage: 'auto',
+    targetLanguage: 'english',
+    detectedLanguage: 'ambiguous',
+    onSourceLanguageChange: vi.fn(),
     onSourceTextChange: vi.fn(),
     onClear: vi.fn(),
     ...overrides,
@@ -38,6 +42,10 @@ function ControlledSourcePane({
       overLimit={false}
       inputLimit={4000}
       inputWarnAt={3200}
+      sourceLanguage="auto"
+      targetLanguage="english"
+      detectedLanguage="ambiguous"
+      onSourceLanguageChange={vi.fn()}
       onSourceTextChange={(nextSourceText) => {
         onSourceTextChange(nextSourceText)
         setSourceText(nextSourceText)
@@ -51,6 +59,36 @@ function ControlledSourcePane({
 }
 
 describe('SourcePane', () => {
+  it('shows the detected language and disables the selected target language', async () => {
+    const user = userEvent.setup()
+    renderSource({
+      sourceText: 'Hello, world.',
+      sourceLength: 13,
+      detectedLanguage: 'english',
+    })
+
+    expect(screen.getByText('English を検出')).toBeDefined()
+    await user.click(screen.getByRole('combobox', { name: '原文の言語' }))
+    expect(
+      screen
+        .getByRole('option', { name: 'English' })
+        .getAttribute('aria-disabled'),
+    ).toBe('true')
+  })
+
+  it('changes the source language through the pane header', async () => {
+    const user = userEvent.setup()
+    const onSourceLanguageChange = vi.fn()
+    renderSource({
+      targetLanguage: 'japanese',
+      onSourceLanguageChange,
+    })
+
+    await user.click(screen.getByRole('combobox', { name: '原文の言語' }))
+    await user.click(screen.getByRole('option', { name: 'English' }))
+    expect(onSourceLanguageChange).toHaveBeenCalledWith('english')
+  })
+
   it('renders the supplied grapheme count and input limit without recounting source text', () => {
     renderSource({
       sourceText: 'この原文の長さとは異なる値',

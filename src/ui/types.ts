@@ -6,14 +6,16 @@
  * the translation domain so the UI does not redefine its values.
  */
 
-import type { Tone } from '../translation'
+import type {
+  DetectedLanguage,
+  Language,
+  SourceLanguage,
+  Tone,
+} from '../translation'
 
-export type { Tone }
+export type { DetectedLanguage, Language, SourceLanguage, Tone }
 
 export type ConnectionStatus = 'ready' | 'checking' | 'unavailable'
-
-/** The direction currently shown in the language direction bar (source -> target). */
-export type TranslationDirection = 'jaToEn' | 'enToJa'
 
 /**
  * The translation pane's display state. `idle` covers both "no source text
@@ -25,6 +27,7 @@ export type TranslationStatus =
   | 'pending'
   | 'streaming'
   | 'done'
+  | 'languageConflict'
   | 'connectionError'
   | 'translationError'
   | 'overLimit'
@@ -54,14 +57,11 @@ export interface WorkspaceProps {
   /** Clears the source text. Only invoked while `sourceText` is non-empty. */
   onClear: () => void
 
-  /** The direction currently resolved for display (source -> target). */
-  direction: TranslationDirection
-  /** `true` when the direction is user-fixed; `false` while auto-detecting. */
-  isDirectionFixed: boolean
-  /** Invoked by the `⇄` control: swaps and fixes the direction. */
-  onSwapDirection: () => void
-  /** Invoked by pressing the `FIXED` label: returns to auto-detection. */
-  onReleaseFixedDirection: () => void
+  sourceLanguage: SourceLanguage
+  targetLanguage: Language
+  detectedLanguage: DetectedLanguage
+  onSourceLanguageChange: (language: SourceLanguage) => void
+  onTargetLanguageChange: (language: Language) => void
 
   idiomatic: boolean
   onIdiomaticChange: (idiomatic: boolean) => void

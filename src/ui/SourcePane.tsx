@@ -1,9 +1,15 @@
+import { useState } from 'react'
 import Button from '@mui/material/Button'
+import FormControl from '@mui/material/FormControl'
 import InputBase from '@mui/material/InputBase'
+import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
+import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { BODY_TEXT_SX } from './bodyText'
+import { LANGUAGE_NAMES, SOURCE_LANGUAGE_OPTIONS } from './languages'
+import type { DetectedLanguage, Language, SourceLanguage } from './types'
 
 export function SourcePane({
   sourceText,
@@ -11,6 +17,10 @@ export function SourcePane({
   overLimit,
   inputLimit,
   inputWarnAt,
+  sourceLanguage,
+  targetLanguage,
+  detectedLanguage,
+  onSourceLanguageChange,
   onSourceTextChange,
   onClear,
 }: {
@@ -19,9 +29,14 @@ export function SourcePane({
   overLimit: boolean
   inputLimit: number
   inputWarnAt: number
+  sourceLanguage: SourceLanguage
+  targetLanguage: Language
+  detectedLanguage: DetectedLanguage
+  onSourceLanguageChange: (language: SourceLanguage) => void
   onSourceTextChange: (text: string) => void
   onClear: () => void
 }) {
+  const [isInputFocused, setIsInputFocused] = useState(false)
   const counterSx = overLimit
     ? { color: 'error.main' }
     : sourceLength > inputWarnAt
@@ -39,20 +54,53 @@ export function SourcePane({
         display: 'flex',
         flexDirection: 'column',
         p: 2,
-        '&:focus-within': { borderColor: 'primary.main' },
+        borderColor: isInputFocused ? 'primary.main' : undefined,
       }}
     >
-      <Stack
-        direction="row"
-        sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-      >
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <Typography variant="overline" color="text.secondary">
           原文
         </Typography>
-        <Button size="small" onClick={onClear} disabled={sourceLength === 0}>
+        <FormControl size="small" sx={{ minWidth: 128 }}>
+          <Select
+            value={sourceLanguage}
+            inputProps={{ 'aria-label': '原文の言語' }}
+            onChange={(event) =>
+              onSourceLanguageChange(event.target.value as SourceLanguage)
+            }
+          >
+            {SOURCE_LANGUAGE_OPTIONS.map((option) => (
+              <MenuItem
+                key={option.value}
+                value={option.value}
+                disabled={option.value === targetLanguage}
+              >
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Button
+          size="small"
+          onClick={onClear}
+          disabled={sourceLength === 0}
+          sx={{ ml: 'auto' }}
+        >
           消去
         </Button>
       </Stack>
+
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ minHeight: 44, display: 'flex', alignItems: 'center', ml: 6 }}
+      >
+        {sourceLanguage === 'auto' &&
+        detectedLanguage !== 'ambiguous' &&
+        sourceLength > 0
+          ? `${LANGUAGE_NAMES[detectedLanguage]} を検出`
+          : ''}
+      </Typography>
 
       <InputBase
         fullWidth
@@ -60,6 +108,8 @@ export function SourcePane({
         autoFocus
         value={sourceText}
         onChange={(event) => onSourceTextChange(event.target.value)}
+        onFocus={() => setIsInputFocused(true)}
+        onBlur={() => setIsInputFocused(false)}
         placeholder="入力すると自動で翻訳します"
         inputProps={{ 'aria-label': '原文' }}
         sx={{

@@ -1,4 +1,5 @@
 import { INPUT_LIMIT } from './constants'
+import { detectLanguage } from './detection'
 import { countGraphemes } from './graphemes'
 import type { WorkspaceSnapshot, WorkspaceState } from './types'
 
@@ -11,8 +12,8 @@ export const defaultWorkspaceState: WorkspaceState = {
   completedIdiomatic: null,
   completedTone: null,
   translationIsCurrent: true,
-  direction: 'ja-to-en',
-  directionControl: 'auto',
+  sourceLanguage: 'auto',
+  targetLanguage: 'english',
   idiomatic: false,
   tone: 'standard',
   translationStatus: 'idle',
@@ -40,8 +41,9 @@ export function toSnapshot(state: WorkspaceState): WorkspaceSnapshot {
     source: state.source,
     translation: state.translation,
     translationIsCurrent: state.translationIsCurrent,
-    direction: state.direction,
-    directionControl: state.directionControl,
+    sourceLanguage: state.sourceLanguage,
+    targetLanguage: state.targetLanguage,
+    detectedLanguage: detectLanguage(state.source),
     idiomatic: state.idiomatic,
     tone: state.tone,
     translationStatus: state.translationStatus,

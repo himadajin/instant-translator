@@ -2,14 +2,13 @@ import Box from '@mui/material/Box'
 import Container from '@mui/material/Container'
 import Stack from '@mui/material/Stack'
 import { Header } from './Header'
-import { Toolbar } from './Toolbar'
 import { SourcePane } from './SourcePane'
 import { TranslationPane } from './TranslationPane'
 import type { WorkspaceProps } from './types'
 
 /**
  * The single translation workspace screen. Renders the identity row, the
- * toolbar, and the source/translation papers, in the order defined by
+ * source/translation papers in the order defined by
  * docs/internal/specs/ui.md.
  *
  * This component owns no translation logic: it only displays the given
@@ -24,10 +23,11 @@ export function Workspace({
   inputWarnAt,
   onSourceTextChange,
   onClear,
-  direction,
-  isDirectionFixed,
-  onSwapDirection,
-  onReleaseFixedDirection,
+  sourceLanguage,
+  targetLanguage,
+  detectedLanguage,
+  onSourceLanguageChange,
+  onTargetLanguageChange,
   idiomatic,
   onIdiomaticChange,
   tone,
@@ -51,21 +51,11 @@ export function Workspace({
           pb: 3,
         }}
       >
-        <Toolbar
-          direction={direction}
-          isDirectionFixed={isDirectionFixed}
-          onSwapDirection={onSwapDirection}
-          onReleaseFixedDirection={onReleaseFixedDirection}
-          idiomatic={idiomatic}
-          onIdiomaticChange={onIdiomaticChange}
-          tone={tone}
-          onToneChange={onToneChange}
-        />
         <Stack
           component="main"
           direction={{ xs: 'column', md: 'row' }}
           spacing={3}
-          sx={{ flex: 1, minHeight: 0 }}
+          sx={{ flex: 1, minHeight: 0, pt: 2 }}
         >
           <SourcePane
             sourceText={sourceText}
@@ -73,6 +63,10 @@ export function Workspace({
             overLimit={overLimit}
             inputLimit={inputLimit}
             inputWarnAt={inputWarnAt}
+            sourceLanguage={sourceLanguage}
+            targetLanguage={targetLanguage}
+            detectedLanguage={detectedLanguage}
+            onSourceLanguageChange={onSourceLanguageChange}
             onSourceTextChange={onSourceTextChange}
             onClear={onClear}
           />
@@ -81,6 +75,14 @@ export function Workspace({
             translatedText={translatedText}
             previousTranslatedText={previousTranslatedText}
             inputLimit={inputLimit}
+            sourceLanguage={sourceLanguage}
+            targetLanguage={targetLanguage}
+            detectedLanguage={detectedLanguage}
+            onTargetLanguageChange={onTargetLanguageChange}
+            idiomatic={idiomatic}
+            onIdiomaticChange={onIdiomaticChange}
+            tone={tone}
+            onToneChange={onToneChange}
             onCopy={onCopy}
             onRetry={onRetry}
           />
