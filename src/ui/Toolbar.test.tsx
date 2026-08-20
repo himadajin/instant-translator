@@ -15,6 +15,7 @@ function renderToolbar({
   const onToneChange = vi.fn()
   const onSwapDirection = vi.fn()
   const onReleaseFixedDirection = vi.fn()
+  const onTranslationMethodChange = vi.fn()
 
   render(
     <Toolbar
@@ -23,7 +24,7 @@ function renderToolbar({
       onSwapDirection={onSwapDirection}
       onReleaseFixedDirection={onReleaseFixedDirection}
       translationMethod="standard"
-      onTranslationMethodChange={vi.fn()}
+      onTranslationMethodChange={onTranslationMethodChange}
       tone={tone}
       onToneChange={onToneChange}
     />,
@@ -33,97 +34,99 @@ function renderToolbar({
     onToneChange,
     onSwapDirection,
     onReleaseFixedDirection,
-    toneTrigger: screen.getByRole('button', { name: /TONE/ }),
+    onTranslationMethodChange,
+    toneTrigger: screen.getByRole('combobox', { name: '口調' }),
   }
 }
 
 function getToneOptions() {
-  const menu = screen.getByRole('menu', { name: 'TONE' })
+  const listbox = screen.getByRole('listbox', { name: '口調' })
   return {
-    menu,
-    options: within(menu).getAllByRole('menuitemradio'),
+    listbox,
+    options: within(listbox).getAllByRole('option'),
   }
 }
 
 describe('Toolbar direction group', () => {
-  it('swaps the direction through the accessible swap control', async () => {
+  it('shows a non-interactive auto label and swaps through the accessible swap control', async () => {
     const user = userEvent.setup()
     const { onSwapDirection } = renderToolbar()
 
-    expect(screen.getByText('AUTO')).not.toBeInstanceOf(HTMLButtonElement)
+    expect(screen.getByText('自動')).not.toBeInstanceOf(HTMLButtonElement)
+    expect(screen.queryByRole('button', { name: '自動検出に戻す' })).toBeNull()
     await user.click(
       screen.getByRole('button', { name: '翻訳方向を入れ替えて固定する' }),
     )
     expect(onSwapDirection).toHaveBeenCalledTimes(1)
   })
 
-  it('releases a fixed direction by pressing FIXED', async () => {
+  it('releases a fixed direction by pressing the fixed chip', async () => {
     const user = userEvent.setup()
     const { onReleaseFixedDirection } = renderToolbar({
       isDirectionFixed: true,
     })
 
-    await user.click(screen.getByRole('button', { name: /FIXED/ }))
+    await user.click(screen.getByRole('button', { name: '自動検出に戻す' }))
     expect(onReleaseFixedDirection).toHaveBeenCalledTimes(1)
   })
 })
 
-describe('Toolbar tone menu', () => {
-  it('opens through its accessible trigger with menu radio semantics', async () => {
+describe('Toolbar translation method', () => {
+  it('marks the current method pressed and forwards a change', async () => {
+    const user = userEvent.setup()
+    const { onTranslationMethodChange } = renderToolbar()
+
+    const standard = screen.getByRole('button', { name: '標準翻訳' })
+    const idiomatic = screen.getByRole('button', { name: '意訳' })
+    expect(standard.getAttribute('aria-pressed')).toBe('true')
+    expect(idiomatic.getAttribute('aria-pressed')).toBe('false')
+
+    await user.click(idiomatic)
+    expect(onTranslationMethodChange).toHaveBeenCalledTimes(1)
+    expect(onTranslationMethodChange).toHaveBeenCalledWith('idiomatic')
+  })
+
+  it('ignores a click on the already selected method', async () => {
+    const user = userEvent.setup()
+    const { onTranslationMethodChange } = renderToolbar()
+
+    await user.click(screen.getByRole('button', { name: '標準翻訳' }))
+    expect(onTranslationMethodChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('Toolbar tone select', () => {
+  it('opens a listbox showing all tones with the current one selected', async () => {
     const user = userEvent.setup()
     const { toneTrigger } = renderToolbar({ tone: 'technical' })
 
-    expect(toneTrigger.getAttribute('aria-haspopup')).toBe('menu')
-    expect(toneTrigger.getAttribute('aria-expanded')).toBe('false')
-
     await user.click(toneTrigger)
 
-    const { menu, options } = getToneOptions()
-    expect(toneTrigger.getAttribute('aria-expanded')).toBe('true')
+    const { options } = getToneOptions()
     expect(options).toHaveLength(4)
     expect(
       options.filter(
-        (option) => option.getAttribute('aria-checked') === 'true',
+        (option) => option.getAttribute('aria-selected') === 'true',
       ),
     ).toHaveLength(1)
-    expect(options[2]?.getAttribute('aria-checked')).toBe('true')
-    expect(menu.contains(document.activeElement)).toBe(true)
+    expect(options[2]?.getAttribute('aria-selected')).toBe('true')
+    expect(options[2]?.textContent).toBe('技術文書')
   })
 
-  it('moves focus with arrows without changing selection or invoking the callback', async () => {
+  it('selects a tone by click and closes the listbox', async () => {
     const user = userEvent.setup()
     const { onToneChange, toneTrigger } = renderToolbar()
 
     await user.click(toneTrigger)
     const { options } = getToneOptions()
+    await user.click(options[1]!)
 
-    await user.keyboard('{ArrowDown}{ArrowDown}')
-    expect(document.activeElement).toBe(options[1])
-    expect(options[0]?.getAttribute('aria-checked')).toBe('true')
-    expect(options[1]?.getAttribute('aria-checked')).toBe('false')
-    expect(onToneChange).not.toHaveBeenCalled()
-
-    await user.keyboard('{ArrowUp}')
-    expect(document.activeElement).toBe(options[0])
-    expect(options[0]?.getAttribute('aria-checked')).toBe('true')
-    expect(onToneChange).not.toHaveBeenCalled()
+    expect(onToneChange).toHaveBeenCalledTimes(1)
+    expect(onToneChange).toHaveBeenCalledWith('chat' satisfies Tone)
+    expect(screen.queryByRole('listbox', { name: '口調' })).toBeNull()
   })
 
-  it('moves to the first and last option with Home and End', async () => {
-    const user = userEvent.setup()
-    const { toneTrigger } = renderToolbar()
-
-    await user.click(toneTrigger)
-    const { options } = getToneOptions()
-
-    await user.keyboard('{ArrowDown}{End}')
-    expect(document.activeElement).toBe(options[3])
-
-    await user.keyboard('{Home}')
-    expect(document.activeElement).toBe(options[0])
-  })
-
-  it('selects the focused tone with Enter, closes, and restores trigger focus', async () => {
+  it('selects the focused tone with the keyboard', async () => {
     const user = userEvent.setup()
     const { onToneChange, toneTrigger } = renderToolbar()
 
@@ -132,28 +135,11 @@ describe('Toolbar tone menu', () => {
     await user.keyboard('{ArrowDown}{ArrowDown}{Enter}')
 
     expect(onToneChange).toHaveBeenCalledTimes(1)
-    expect(onToneChange).toHaveBeenCalledWith('chat' satisfies Tone)
-    expect(screen.queryByRole('menu', { name: 'TONE' })).toBeNull()
-    expect(toneTrigger.getAttribute('aria-expanded')).toBe('false')
-    expect(document.activeElement).toBe(toneTrigger)
-  })
-
-  it('selects the focused tone with Space, closes, and restores trigger focus', async () => {
-    const user = userEvent.setup()
-    const { onToneChange, toneTrigger } = renderToolbar()
-
-    await user.click(toneTrigger)
-    getToneOptions()
-    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown} ')
-
-    expect(onToneChange).toHaveBeenCalledTimes(1)
     expect(onToneChange).toHaveBeenCalledWith('technical' satisfies Tone)
-    expect(screen.queryByRole('menu', { name: 'TONE' })).toBeNull()
-    expect(toneTrigger.getAttribute('aria-expanded')).toBe('false')
-    expect(document.activeElement).toBe(toneTrigger)
+    expect(screen.queryByRole('listbox', { name: '口調' })).toBeNull()
   })
 
-  it('closes with Escape without selecting and restores trigger focus', async () => {
+  it('closes with Escape without selecting', async () => {
     const user = userEvent.setup()
     const { onToneChange, toneTrigger } = renderToolbar({ tone: 'casual' })
 
@@ -161,17 +147,7 @@ describe('Toolbar tone menu', () => {
     await user.keyboard('{ArrowUp}{Escape}')
 
     expect(onToneChange).not.toHaveBeenCalled()
-    expect(screen.queryByRole('menu', { name: 'TONE' })).toBeNull()
-    expect(toneTrigger.getAttribute('aria-expanded')).toBe('false')
-    expect(document.activeElement).toBe(toneTrigger)
-    expect(screen.getByRole('button', { name: /カジュアル/ })).toBe(toneTrigger)
-
-    await user.click(toneTrigger)
-    const { menu } = getToneOptions()
-    const casualOption = within(menu).getByRole('menuitemradio', {
-      name: 'カジュアル',
-    })
-    expect(casualOption.getAttribute('aria-checked')).toBe('true')
-    expect(menu.contains(document.activeElement)).toBe(true)
+    expect(screen.queryByRole('listbox', { name: '口調' })).toBeNull()
+    expect(toneTrigger.textContent).toContain('カジュアル')
   })
 })

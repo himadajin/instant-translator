@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import LinearProgress from '@mui/material/LinearProgress'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { visuallyHidden } from '@mui/utils'
 import type { TranslationStatus } from './types'
-import styles from '../styles/Pane.module.css'
+import { BODY_TEXT_SX } from './bodyText'
 
-const COPIED_LABEL_DURATION_MS = 1500
+const COPIED_LABEL_DURATION_MS = 2000
 
 // Announces only translation start/completion milestones (not each streamed
 // token). `pending` and `streaming` share the same text so entering
@@ -40,7 +49,8 @@ export function TranslationPane({
     return () => clearTimeout(copyTimeoutRef.current)
   }, [])
 
-  const canCopy = translationStatus === 'done' && translatedText.length > 0
+  const isTranslating =
+    translationStatus === 'pending' || translationStatus === 'streaming'
 
   const handleCopy = async () => {
     try {
@@ -57,20 +67,45 @@ export function TranslationPane({
   }
 
   return (
-    <section className={styles.pane} aria-label="訳文">
-      <div className={styles.paneHeader}>
-        <span className={styles.metaLabel}>TRANSLATION</span>
-        <button
-          type="button"
-          className={styles.paneAction}
-          onClick={handleCopy}
-          disabled={!canCopy}
-        >
-          {isCopied ? 'COPIED' : 'COPY'}
-        </button>
-      </div>
+    <Paper
+      component="section"
+      variant="outlined"
+      aria-label="訳文"
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <Box sx={{ height: 4, flexShrink: 0 }}>
+        {isTranslating && <LinearProgress sx={{ height: 4 }} />}
+      </Box>
 
-      <div className={styles.translationBody}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 2,
+          pt: 2,
+        }}
+      >
+        <Typography variant="overline" color="text.secondary">
+          訳文
+        </Typography>
+        <Button
+          size="small"
+          startIcon={<ContentCopyIcon fontSize="small" />}
+          onClick={handleCopy}
+          disabled={translationStatus !== 'done'}
+        >
+          {isCopied ? 'コピーしました' : 'コピー'}
+        </Button>
+      </Stack>
+
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pb: 2 }}>
         {renderBody({
           translationStatus,
           translatedText,
@@ -78,12 +113,12 @@ export function TranslationPane({
           inputLimit,
           onRetry,
         })}
-      </div>
+      </Box>
 
-      <span className={styles.visuallyHidden} role="status" aria-live="polite">
+      <Box component="span" role="status" aria-live="polite" sx={visuallyHidden}>
         {STATUS_ANNOUNCEMENT[translationStatus] ?? ''}
-      </span>
-    </section>
+      </Box>
+    </Paper>
   )
 }
 
@@ -100,45 +135,47 @@ function renderBody({
   inputLimit: number
   onRetry: () => void
 }) {
+  const retryAction = (
+    <Button color="inherit" size="small" onClick={onRetry}>
+      再試行
+    </Button>
+  )
+
   switch (translationStatus) {
     case 'idle':
-      return <p className={styles.placeholder}>翻訳結果</p>
+      return <Typography color="text.secondary">翻訳結果</Typography>
     case 'pending':
       return previousTranslatedText ? (
-        <p className={styles.translationText} data-dimmed="true">
+        <Typography sx={{ ...BODY_TEXT_SX, color: 'text.disabled' }}>
           {previousTranslatedText}
-        </p>
+        </Typography>
       ) : (
-        <p className={styles.placeholder}>翻訳結果</p>
+        <Typography color="text.secondary">翻訳結果</Typography>
       )
     case 'streaming':
     case 'done':
-      return <p className={styles.translationText}>{translatedText}</p>
+      return (
+        <Typography sx={{ ...BODY_TEXT_SX, color: 'text.primary' }}>
+          {translatedText}
+        </Typography>
+      )
     case 'connectionError':
       return (
-        <div className={styles.errorState}>
-          <p className={styles.errorText}>ローカル翻訳に接続できません</p>
-          <button type="button" className={styles.retry} onClick={onRetry}>
-            再試行
-          </button>
-        </div>
+        <Alert severity="error" action={retryAction}>
+          ローカル翻訳に接続できません
+        </Alert>
       )
     case 'translationError':
       return (
-        <div className={styles.errorState}>
-          <p className={styles.errorText}>翻訳を完了できませんでした</p>
-          <button type="button" className={styles.retry} onClick={onRetry}>
-            再試行
-          </button>
-        </div>
+        <Alert severity="error" action={retryAction}>
+          翻訳を完了できませんでした
+        </Alert>
       )
     case 'overLimit':
       return (
-        <div className={styles.errorState}>
-          <p className={styles.errorText}>
-            原文が {inputLimit.toLocaleString()} 文字を超えています
-          </p>
-        </div>
+        <Typography color="error.main">
+          原文が {inputLimit.toLocaleString()} 文字を超えています
+        </Typography>
       )
   }
 }

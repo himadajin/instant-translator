@@ -1,19 +1,27 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import * as ToggleGroup from '@radix-ui/react-toggle-group'
+import Chip from '@mui/material/Chip'
+import FormControl from '@mui/material/FormControl'
+import IconButton from '@mui/material/IconButton'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import Stack from '@mui/material/Stack'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import Typography from '@mui/material/Typography'
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import {
   TONE_OPTIONS,
   type Tone,
   type TranslationDirection,
   type TranslationMethod,
 } from './types'
-import styles from '../styles/Toolbar.module.css'
 
 const LANGUAGE_NAMES: Record<
   TranslationDirection,
   { source: string; target: string }
 > = {
-  jaToEn: { source: '日本語', target: 'ENGLISH' },
-  enToJa: { source: 'ENGLISH', target: '日本語' },
+  jaToEn: { source: '日本語', target: 'English' },
+  enToJa: { source: 'English', target: '日本語' },
 }
 
 export function Toolbar({
@@ -36,93 +44,74 @@ export function Toolbar({
   onToneChange: (tone: Tone) => void
 }) {
   const { source, target } = LANGUAGE_NAMES[direction]
-  const toneLabel =
-    TONE_OPTIONS.find((option) => option.value === tone)?.label ?? tone
 
   return (
-    <div className={styles.toolbar}>
-      <div className={styles.group}>
+    <Stack
+      direction="row"
+      useFlexGap
+      spacing={2}
+      sx={{
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        py: 2,
+      }}
+    >
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         {isDirectionFixed ? (
-          <button
-            type="button"
-            className={styles.modeLabel}
+          <Chip
+            size="small"
+            label="固定"
             onClick={onReleaseFixedDirection}
-            aria-label="FIXED: 押すと自動検出へ戻る"
-          >
-            FIXED
-          </button>
+            aria-label="自動検出に戻す"
+          />
         ) : (
-          <span className={styles.modeLabel}>AUTO</span>
+          <Typography variant="body2" color="text.secondary">
+            自動
+          </Typography>
         )}
-        <span className={styles.language}>{source}</span>
-        <button
-          type="button"
-          className={styles.swap}
-          onClick={onSwapDirection}
+        <Typography variant="body2">{source}</Typography>
+        <IconButton
+          size="small"
           aria-label="翻訳方向を入れ替えて固定する"
+          onClick={onSwapDirection}
         >
-          ⇄
-        </button>
-        <span className={styles.language}>{target}</span>
-      </div>
+          <SwapHorizIcon fontSize="small" />
+        </IconButton>
+        <Typography variant="body2">{target}</Typography>
+      </Stack>
 
-      <div className={styles.group}>
-        <span className={styles.metaLabel} id="settings-standard-label">
-          STANDARD
-        </span>
-        <ToggleGroup.Root
-          type="single"
-          className={styles.methodGroup}
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
           value={translationMethod}
-          onValueChange={(value) => {
-            if (value) onTranslationMethodChange(value as TranslationMethod)
+          onChange={(_event, value: TranslationMethod | null) => {
+            if (value !== null) {
+              onTranslationMethodChange(value)
+            }
           }}
-          aria-labelledby="settings-standard-label"
         >
-          <ToggleGroup.Item className={styles.chip} value="standard">
-            標準翻訳
-          </ToggleGroup.Item>
-          <ToggleGroup.Item className={styles.chip} value="idiomatic">
-            意訳
-          </ToggleGroup.Item>
-        </ToggleGroup.Root>
+          <ToggleButton value="standard">標準翻訳</ToggleButton>
+          <ToggleButton value="idiomatic">意訳</ToggleButton>
+        </ToggleButtonGroup>
 
-        <span className={styles.metaLabel} id="settings-tone-label">
-          TONE
-        </span>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger
-            className={styles.toneTrigger}
-            aria-labelledby="settings-tone-label settings-tone-value"
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="tone-select-label">口調</InputLabel>
+          <Select
+            labelId="tone-select-label"
+            label="口調"
+            value={tone}
+            onChange={(event) => onToneChange(event.target.value)}
           >
-            <span id="settings-tone-value">{toneLabel}</span>
-            <span aria-hidden="true">▾</span>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className={styles.toneMenu}
-              aria-labelledby="settings-tone-label"
-              sideOffset={8}
-              align="start"
-            >
-              <DropdownMenu.RadioGroup
-                value={tone}
-                onValueChange={(value) => onToneChange(value as Tone)}
-              >
-                {TONE_OPTIONS.map((option) => (
-                  <DropdownMenu.RadioItem
-                    key={option.value}
-                    value={option.value}
-                    className={styles.toneOption}
-                  >
-                    {option.label}
-                  </DropdownMenu.RadioItem>
-                ))}
-              </DropdownMenu.RadioGroup>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
-      </div>
-    </div>
+            {TONE_OPTIONS.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Stack>
+    </Stack>
   )
 }

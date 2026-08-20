@@ -1,16 +1,15 @@
-import '../styles/fonts.css'
-import '../styles/tokens.css'
+import Box from '@mui/material/Box'
+import Container from '@mui/material/Container'
+import Stack from '@mui/material/Stack'
 import { Header } from './Header'
 import { Toolbar } from './Toolbar'
 import { SourcePane } from './SourcePane'
-import { LanguageRail } from './LanguageRail'
 import { TranslationPane } from './TranslationPane'
 import type { WorkspaceProps } from './types'
-import styles from '../styles/Workspace.module.css'
 
 /**
  * The single translation workspace screen. Renders the identity row, the
- * toolbar, and the source/rail/translation papers, in the order defined by
+ * toolbar, and the source/translation papers, in the order defined by
  * docs/internal/specs/ui.md.
  *
  * This component owns no translation logic: it only displays the given
@@ -39,24 +38,35 @@ export function Workspace({
   onCopy,
   onRetry,
 }: WorkspaceProps) {
-  const isRailActive =
-    translationStatus === 'pending' || translationStatus === 'streaming'
-
   return (
-    <div className={styles.app}>
+    <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Header connectionStatus={connectionStatus} />
-      <Toolbar
-        direction={direction}
-        isDirectionFixed={isDirectionFixed}
-        onSwapDirection={onSwapDirection}
-        onReleaseFixedDirection={onReleaseFixedDirection}
-        translationMethod={translationMethod}
-        onTranslationMethodChange={onTranslationMethodChange}
-        tone={tone}
-        onToneChange={onToneChange}
-      />
-      <main className={styles.main}>
-        <div className={styles.sourceColumn}>
+      <Container
+        maxWidth="lg"
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          pb: 3,
+        }}
+      >
+        <Toolbar
+          direction={direction}
+          isDirectionFixed={isDirectionFixed}
+          onSwapDirection={onSwapDirection}
+          onReleaseFixedDirection={onReleaseFixedDirection}
+          translationMethod={translationMethod}
+          onTranslationMethodChange={onTranslationMethodChange}
+          tone={tone}
+          onToneChange={onToneChange}
+        />
+        <Stack
+          component="main"
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={3}
+          sx={{ flex: 1, minHeight: 0 }}
+        >
           <SourcePane
             sourceText={sourceText}
             sourceLength={sourceLength}
@@ -66,9 +76,6 @@ export function Workspace({
             onSourceTextChange={onSourceTextChange}
             onClear={onClear}
           />
-        </div>
-        <LanguageRail isActive={isRailActive} />
-        <div className={styles.translationColumn}>
           <TranslationPane
             translationStatus={translationStatus}
             translatedText={translatedText}
@@ -77,8 +84,8 @@ export function Workspace({
             onCopy={onCopy}
             onRetry={onRetry}
           />
-        </div>
-      </main>
-    </div>
+        </Stack>
+      </Container>
+    </Box>
   )
 }
