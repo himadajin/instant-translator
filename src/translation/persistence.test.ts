@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { STORAGE_KEY } from './constants'
+import { PROFILES_STORAGE_KEY, STORAGE_KEY } from './constants'
 import { createPersistence } from './persistence'
+import type { ProfileState } from './profiles'
 import type { KeyValueStorage, WorkState } from './types'
 
 function memoryStorage(initial?: Record<string, string>): KeyValueStorage {
@@ -98,5 +99,65 @@ describe('Persistence', () => {
     )
 
     expect(persistence.load()).toBeNull()
+  })
+
+  it('saves and restores profiles under their own key', () => {
+    const storage = memoryStorage()
+    const persistence = createPersistence(storage)
+    const state: ProfileState = {
+      profiles: [
+        {
+          id: 'a',
+          name: 'llama.cpp (ローカル)',
+          baseUrl: 'http://127.0.0.1:8080/v1',
+          apiKey: '',
+          model: '',
+          parameters: { temperature: 0.7 },
+        },
+        {
+          id: 'b',
+          name: 'OpenRouter',
+          baseUrl: 'https://openrouter.ai/api/v1',
+          apiKey: 'or-key',
+          model: 'some/model',
+          parameters: {},
+        },
+      ],
+      selectedId: 'b',
+    }
+    persistence.saveProfiles(state)
+    expect(JSON.parse(storage.getItem(PROFILES_STORAGE_KEY) ?? '')).toEqual(
+      state,
+    )
+    expect(persistence.loadProfiles()).toEqual(state)
+  })
+
+  it('discards invalid profile states instead of migrating them', () => {
+    const storage = memoryStorage()
+    const persistence = createPersistence(storage)
+    const cases: unknown[] = [
+      { profiles: [], selectedId: '' },
+      { profiles: [{ id: 'a' }], selectedId: 'a' },
+      {
+        profiles: [
+          {
+            id: 'a',
+            name: 'x',
+            baseUrl: 'http://127.0.0.1:8080/v1',
+            apiKey: '',
+            model: '',
+            parameters: {},
+          },
+        ],
+        selectedId: 'missing',
+      },
+      'not an object',
+    ]
+    for (const state of cases) {
+      storage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(state))
+      expect(persistence.loadProfiles()).toBeNull()
+    }
+    storage.setItem(PROFILES_STORAGE_KEY, 'not json')
+    expect(persistence.loadProfiles()).toBeNull()
   })
 })

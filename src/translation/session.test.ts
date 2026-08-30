@@ -1,16 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  CHAT_COMPLETIONS_URL,
   DEBOUNCE_MS,
-  HEALTH_URL,
-  INFERENCE_BASE_URL,
   INPUT_LIMIT,
   INPUT_WARN_AT,
+  PROFILES_STORAGE_KEY,
   STORAGE_KEY,
 } from './constants'
 import { createSession } from './session'
 import type { Inference } from './inference'
+import type { ProfileState } from './profiles'
 import type { ConnectionStatus, KeyValueStorage, WorkState } from './types'
+
+// The seeded default profile targets the local llama-server.
+const DEFAULT_BASE_URL = 'http://127.0.0.1:8080/v1'
+const MODELS_URL = `${DEFAULT_BASE_URL}/models`
+const CHAT_COMPLETIONS_URL = `${DEFAULT_BASE_URL}/chat/completions`
 
 function memoryStorage(initial?: Record<string, string>): KeyValueStorage {
   const data = new Map(Object.entries(initial ?? {}))
@@ -94,11 +98,11 @@ function createFetchHarness(options?: { health?: 'ok' | 'down' }) {
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       urls.push(url)
-      if (url === HEALTH_URL) {
+      if (url === MODELS_URL) {
         if (options?.health === 'down') {
           throw new TypeError('Failed to fetch')
         }
-        return new Response(JSON.stringify({ status: 'ok' }), { status: 200 })
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
       }
       if (url === CHAT_COMPLETIONS_URL) {
         const body = JSON.parse(String(init?.body)) as CompletionsCall['body']
@@ -169,9 +173,9 @@ describe('Session', () => {
     await flush()
     expect(harness.completions).toHaveLength(2)
     expect(requestedSource(harness.completions[1])).toBe(englishSource)
-    expect(
-      harness.urls.every((url) => url.startsWith(INFERENCE_BASE_URL)),
-    ).toBe(true)
+    expect(harness.urls.every((url) => url.startsWith(DEFAULT_BASE_URL))).toBe(
+      true,
+    )
     session.dispose()
   })
 
@@ -545,8 +549,8 @@ describe('Session', () => {
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input)
         urls.push(url)
-        if (url === HEALTH_URL) {
-          return new Response(JSON.stringify({ status: 'ok' }), { status: 200 })
+        if (url === MODELS_URL) {
+          return new Response(JSON.stringify({ data: [] }), { status: 200 })
         }
         if (url !== CHAT_COMPLETIONS_URL) {
           throw new Error(`unexpected URL ${url}`)
@@ -594,7 +598,7 @@ describe('Session', () => {
     session.dispose()
   })
 
-  it('10. sends requests only to the local OpenAI-compatible endpoints', async () => {
+  it("10. sends requests only to the selected profile's OpenAI-compatible endpoints", async () => {
     const harness = createFetchHarness()
     const session = createSession({
       fetch: harness.fetchFn,
@@ -610,10 +614,10 @@ describe('Session', () => {
     expect(harness.urls.length).toBeGreaterThan(0)
     expect(
       harness.urls.every(
-        (url) => url === HEALTH_URL || url === CHAT_COMPLETIONS_URL,
+        (url) => url === MODELS_URL || url === CHAT_COMPLETIONS_URL,
       ),
     ).toBe(true)
-    expect(harness.urls).toContain(HEALTH_URL)
+    expect(harness.urls).toContain(MODELS_URL)
     expect(harness.urls).toContain(CHAT_COMPLETIONS_URL)
     expect(harness.completions[0]?.body.stream).toBe(true)
     session.dispose()
@@ -814,7 +818,7 @@ describe('Session', () => {
       storage: memoryStorage(),
     })
     await flush()
-    expect(harness.urls.filter((url) => url === HEALTH_URL)).toHaveLength(1)
+    expect(harness.urls.filter((url) => url === MODELS_URL)).toHaveLength(1)
     session.dispose()
   })
 
@@ -871,7 +875,7 @@ describe('Session', () => {
     const sources: string[] = []
     const inference: Inference = {
       checkHealth: vi.fn(async (): Promise<ConnectionStatus> => 'ready'),
-      async *translate(messages) {
+      async *translate(_profile, messages) {
         sources.push(sourceFrom(messages[0]?.content ?? ''))
         yield 'Latest'
       },
@@ -889,6 +893,158 @@ describe('Session', () => {
     expect(sources).toEqual([latestSource])
     expect(inference.checkHealth).toHaveBeenCalledTimes(1)
     expect(session.getSnapshot().translationStatus).toBe('complete')
+    session.dispose()
+  })
+
+  it('seeds a default llama.cpp profile, persists it, and restores it with the same id', async () => {
+    const storage = memoryStorage()
+    const session = createSession({
+      fetch: createFetchHarness().fetchFn,
+      storage,
+    })
+    await flush()
+    const snapshot = session.getSnapshot()
+    expect(snapshot.profiles).toHaveLength(1)
+    expect(snapshot.profiles[0]?.baseUrl).toBe(DEFAULT_BASE_URL)
+    expect(snapshot.profiles[0]?.apiKey).toBe('')
+    expect(snapshot.profiles[0]?.model).toBe('')
+    expect(snapshot.profiles[0]?.parameters).toEqual({
+      temperature: 0.7,
+      top_p: 0.6,
+      top_k: 20,
+      repeat_penalty: 1.05,
+    })
+    expect(snapshot.selectedProfileId).toBe(snapshot.profiles[0]?.id)
+    const saved = JSON.parse(
+      storage.getItem(PROFILES_STORAGE_KEY) ?? 'null',
+    ) as ProfileState
+    expect(saved.selectedId).toBe(snapshot.selectedProfileId)
+    session.dispose()
+
+    const restored = createSession({
+      fetch: createFetchHarness().fetchFn,
+      storage,
+    })
+    await flush()
+    expect(restored.getSnapshot().selectedProfileId).toBe(saved.selectedId)
+    restored.dispose()
+  })
+
+  it('checks the new profile and retranslates the current source when switching profiles', async () => {
+    const remoteBase = 'https://openrouter.ai/api/v1'
+    const calls: string[] = []
+    const inference: Inference = {
+      checkHealth: vi.fn(async (profile): Promise<ConnectionStatus> => {
+        calls.push(`health:${profile.baseUrl}`)
+        return 'ready'
+      }),
+      async *translate(profile) {
+        calls.push(`translate:${profile.baseUrl}`)
+        yield 'Hello'
+      },
+    }
+    const session = createSession({ inference, storage: memoryStorage() })
+    await flush()
+    session.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(calls).toContain(`translate:${DEFAULT_BASE_URL}`)
+    calls.length = 0
+
+    session.addProfile({
+      name: 'OpenRouter',
+      baseUrl: remoteBase,
+      apiKey: 'or-key',
+      model: 'some/model',
+      parameters: {},
+    })
+    expect(session.getSnapshot().profiles).toHaveLength(2)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(calls).toEqual([])
+
+    const remoteId = session.getSnapshot().profiles[1]!.id
+    session.selectProfile(remoteId)
+    await flush()
+    expect(calls).toContain(`health:${remoteBase}`)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(calls).toContain(`translate:${remoteBase}`)
+    expect(session.getSnapshot().selectedProfileId).toBe(remoteId)
+    session.dispose()
+  })
+
+  it('marks authentication failure distinctly from connection failure', async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === MODELS_URL) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response('unauthorized', { status: 401 })
+    })
+    const session = createSession({ fetch: fetchFn, storage: memoryStorage() })
+    await flush()
+    session.setSource(japaneseSource)
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(session.getSnapshot().translationStatus).toBe('auth-failed')
+    expect(session.getSnapshot().connectionStatus).toBe('auth-failed')
+    expect(session.getSnapshot().source).toBe(japaneseSource)
+    session.dispose()
+  })
+
+  it('updates and deletes profiles, keeping at least one and reselecting after deletion', async () => {
+    const storage = memoryStorage()
+    const calls: string[] = []
+    const inference: Inference = {
+      checkHealth: vi.fn(async (profile): Promise<ConnectionStatus> => {
+        calls.push(`health:${profile.baseUrl}`)
+        return 'ready'
+      }),
+      async *translate() {
+        yield 'Hello'
+      },
+    }
+    const session = createSession({ inference, storage })
+    await flush()
+    const defaultId = session.getSnapshot().selectedProfileId
+
+    session.addProfile({
+      name: 'OpenAI',
+      baseUrl: ' https://api.openai.com/v1/ ',
+      apiKey: 'sk-key',
+      model: 'gpt-5.2',
+      parameters: { temperature: 0.3 },
+    })
+    const added = session.getSnapshot().profiles[1]!
+    expect(added.baseUrl).toBe('https://api.openai.com/v1')
+
+    session.selectProfile(added.id)
+    await flush()
+    calls.length = 0
+    session.updateProfile(added.id, {
+      name: 'OpenAI',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'sk-key-2',
+      model: 'gpt-5.2',
+      parameters: {},
+    })
+    await flush()
+    expect(calls).toContain('health:https://api.openai.com/v1')
+    expect(session.getSnapshot().profiles[1]?.apiKey).toBe('sk-key-2')
+
+    session.deleteProfile(added.id)
+    expect(session.getSnapshot().profiles).toHaveLength(1)
+    expect(session.getSnapshot().selectedProfileId).toBe(defaultId)
+
+    session.deleteProfile(defaultId)
+    expect(session.getSnapshot().profiles).toHaveLength(1)
+
+    const saved = JSON.parse(
+      storage.getItem(PROFILES_STORAGE_KEY) ?? 'null',
+    ) as ProfileState
+    expect(saved.profiles).toHaveLength(1)
+    expect(saved.selectedId).toBe(defaultId)
     session.dispose()
   })
 })

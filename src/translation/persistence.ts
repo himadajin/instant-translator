@@ -1,4 +1,5 @@
-import { STORAGE_KEY } from './constants'
+import { PROFILES_STORAGE_KEY, STORAGE_KEY } from './constants'
+import type { Profile, ProfileState } from './profiles'
 import type { KeyValueStorage, WorkState } from './types'
 
 export function createPersistence(storage: KeyValueStorage) {
@@ -22,7 +23,63 @@ export function createPersistence(storage: KeyValueStorage) {
     save(state: WorkState): void {
       storage.setItem(STORAGE_KEY, JSON.stringify(state))
     },
+
+    loadProfiles(): ProfileState | null {
+      const raw = storage.getItem(PROFILES_STORAGE_KEY)
+      if (raw === null) {
+        return null
+      }
+      try {
+        const parsed: unknown = JSON.parse(raw)
+        if (!isProfileState(parsed)) {
+          return null
+        }
+        return parsed
+      } catch {
+        return null
+      }
+    },
+
+    saveProfiles(state: ProfileState): void {
+      storage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(state))
+    },
   }
+}
+
+function isProfileState(value: unknown): value is ProfileState {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const record = value as Record<string, unknown>
+  if (!Array.isArray(record.profiles) || record.profiles.length === 0) {
+    return false
+  }
+  if (!record.profiles.every(isProfile)) {
+    return false
+  }
+  const profiles = record.profiles as Profile[]
+  return (
+    typeof record.selectedId === 'string' &&
+    profiles.some((profile) => profile.id === record.selectedId)
+  )
+}
+
+function isProfile(value: unknown): value is Profile {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const record = value as Record<string, unknown>
+  return (
+    typeof record.id === 'string' &&
+    record.id.length > 0 &&
+    typeof record.name === 'string' &&
+    typeof record.baseUrl === 'string' &&
+    typeof record.apiKey === 'string' &&
+    typeof record.model === 'string' &&
+    typeof record.parameters === 'object' &&
+    record.parameters !== null &&
+    !Array.isArray(record.parameters)
+  )
 }
 
 function isWorkState(value: unknown): value is WorkState {

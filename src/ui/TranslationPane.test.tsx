@@ -186,7 +186,8 @@ describe('TranslationPane', () => {
   })
 
   it.each([
-    ['connection error', 'connectionError', 'ローカル翻訳に接続できません'],
+    ['connection error', 'connectionError', '推論先に接続できません'],
+    ['auth error', 'authError', 'API キーが認証されませんでした'],
     ['translation error', 'translationError', '翻訳を完了できませんでした'],
   ] as const)('%s offers a retry action', async (_label, status, message) => {
     const user = userEvent.setup()

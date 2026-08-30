@@ -16,6 +16,12 @@ import type { WorkspaceProps } from './types'
  */
 export function Workspace({
   connectionStatus,
+  profiles,
+  selectedProfileId,
+  onProfileSelect,
+  onProfileAdd,
+  onProfileUpdate,
+  onProfileDelete,
   sourceText,
   sourceLength,
   overLimit,
@@ -40,7 +46,15 @@ export function Workspace({
 }: WorkspaceProps) {
   return (
     <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <Header connectionStatus={connectionStatus} />
+      <Header
+        connectionStatus={connectionStatus}
+        profiles={profiles}
+        selectedProfileId={selectedProfileId}
+        onProfileSelect={onProfileSelect}
+        onProfileAdd={onProfileAdd}
+        onProfileUpdate={onProfileUpdate}
+        onProfileDelete={onProfileDelete}
+      />
       <Container
         maxWidth="lg"
         sx={{

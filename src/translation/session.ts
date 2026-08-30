@@ -1,22 +1,30 @@
 import { DEBOUNCE_MS, INPUT_LIMIT } from './constants'
 import { detectLanguage } from './detection'
 import {
+  AuthError,
   ConnectionError,
   createInference,
   isAbortError,
   type Inference,
 } from './inference'
 import { createPersistence } from './persistence'
+import {
+  createDefaultProfileState,
+  createProfileId,
+  normalizeBaseUrl,
+  type Profile,
+  type ProfileDraft,
+} from './profiles'
 import { buildMessages } from './prompts'
 import { countGraphemes } from './graphemes'
 import type {
   KeyValueStorage,
   Language,
+  SessionSnapshot,
   SourceLanguage,
   Tone,
   TranslationDirection,
   WorkState,
-  WorkspaceSnapshot,
   WorkspaceState,
 } from './types'
 import { createWorkspace, toSnapshot } from './workspace'
@@ -28,13 +36,17 @@ export type SessionDeps = {
 }
 
 export type Session = {
-  getSnapshot(): WorkspaceSnapshot
-  subscribe(listener: (snapshot: WorkspaceSnapshot) => void): () => void
+  getSnapshot(): SessionSnapshot
+  subscribe(listener: (snapshot: SessionSnapshot) => void): () => void
   setSource(source: string): void
   setSourceLanguage(language: SourceLanguage): void
   setTargetLanguage(language: Language): void
   setIdiomatic(idiomatic: boolean): void
   setTone(tone: Tone): void
+  selectProfile(id: string): void
+  addProfile(draft: ProfileDraft): void
+  updateProfile(id: string, draft: ProfileDraft): void
+  deleteProfile(id: string): void
   clear(): void
   retry(): void
   checkConnection(): Promise<void>
@@ -46,9 +58,11 @@ export function createSession(deps: SessionDeps = {}): Session {
   const persistence = createPersistence(storage)
   const inference = deps.inference ?? createInference(deps.fetch ?? fetch)
   const workspace = createWorkspace(restoredState(persistence.load()))
+  const loadedProfiles = persistence.loadProfiles()
+  let profileState = loadedProfiles ?? createDefaultProfileState()
 
-  const listeners = new Set<(snapshot: WorkspaceSnapshot) => void>()
-  let cachedSnapshot = toSnapshot(workspace.read())
+  const listeners = new Set<(snapshot: SessionSnapshot) => void>()
+  let cachedSnapshot = snapshotFrom()
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestId = 0
   let healthAbort: AbortController | undefined
@@ -56,12 +70,20 @@ export function createSession(deps: SessionDeps = {}): Session {
   let translateAbort: AbortController | undefined
   let disposed = false
 
-  function getSnapshot(): WorkspaceSnapshot {
+  function snapshotFrom(): SessionSnapshot {
+    return {
+      ...toSnapshot(workspace.read()),
+      profiles: profileState.profiles,
+      selectedProfileId: profileState.selectedId,
+    }
+  }
+
+  function getSnapshot(): SessionSnapshot {
     return cachedSnapshot
   }
 
   function emit(): void {
-    cachedSnapshot = toSnapshot(workspace.read())
+    cachedSnapshot = snapshotFrom()
     for (const listener of listeners) {
       listener(cachedSnapshot)
     }
@@ -69,6 +91,18 @@ export function createSession(deps: SessionDeps = {}): Session {
 
   function persist(): void {
     persistence.save(workStateFrom(workspace.read()))
+  }
+
+  function selectedProfile(): Profile {
+    return (
+      profileState.profiles.find(
+        (profile) => profile.id === profileState.selectedId,
+      ) ?? profileState.profiles[0]
+    )
+  }
+
+  function persistProfiles(): void {
+    persistence.saveProfiles(profileState)
   }
 
   function scheduleTranslate(): void {
@@ -155,6 +189,7 @@ export function createSession(deps: SessionDeps = {}): Session {
     try {
       let gotChunk = false
       for await (const chunk of inference.translate(
+        selectedProfile(),
         messages,
         translateAbort.signal,
       )) {
@@ -210,6 +245,11 @@ export function createSession(deps: SessionDeps = {}): Session {
         workspace.write({
           connectionStatus: 'unavailable',
           translationStatus: 'connection-failed',
+        })
+      } else if (error instanceof AuthError) {
+        workspace.write({
+          connectionStatus: 'auth-failed',
+          translationStatus: 'auth-failed',
         })
       } else {
         workspace.write({ translationStatus: 'translation-failed' })
@@ -297,6 +337,71 @@ export function createSession(deps: SessionDeps = {}): Session {
     scheduleTranslate()
   }
 
+  function selectProfile(id: string): void {
+    if (
+      id === profileState.selectedId ||
+      !profileState.profiles.some((profile) => profile.id === id)
+    ) {
+      return
+    }
+    profileState = { ...profileState, selectedId: id }
+    persistProfiles()
+    emit()
+    void checkConnection()
+    scheduleTranslate()
+  }
+
+  function addProfile(draft: ProfileDraft): void {
+    const profile = normalizedProfile(createProfileId(), draft)
+    profileState = {
+      ...profileState,
+      profiles: [...profileState.profiles, profile],
+    }
+    persistProfiles()
+    emit()
+  }
+
+  function updateProfile(id: string, draft: ProfileDraft): void {
+    if (!profileState.profiles.some((profile) => profile.id === id)) {
+      return
+    }
+    profileState = {
+      ...profileState,
+      profiles: profileState.profiles.map((profile) =>
+        profile.id === id ? normalizedProfile(id, draft) : profile,
+      ),
+    }
+    persistProfiles()
+    emit()
+    if (id === profileState.selectedId) {
+      void checkConnection()
+      scheduleTranslate()
+    }
+  }
+
+  function deleteProfile(id: string): void {
+    if (
+      profileState.profiles.length === 1 ||
+      !profileState.profiles.some((profile) => profile.id === id)
+    ) {
+      return
+    }
+    const profiles = profileState.profiles.filter(
+      (profile) => profile.id !== id,
+    )
+    const deletedSelected = id === profileState.selectedId
+    profileState = {
+      profiles,
+      selectedId: deletedSelected ? profiles[0].id : profileState.selectedId,
+    }
+    persistProfiles()
+    emit()
+    if (deletedSelected) {
+      void checkConnection()
+      scheduleTranslate()
+    }
+  }
+
   function clear(): void {
     if (debounceTimer !== undefined) {
       clearTimeout(debounceTimer)
@@ -338,7 +443,10 @@ export function createSession(deps: SessionDeps = {}): Session {
     workspace.write({ connectionStatus: 'checking' })
     emit()
     try {
-      const status = await inference.checkHealth(controller.signal)
+      const status = await inference.checkHealth(
+        selectedProfile(),
+        controller.signal,
+      )
       if (disposed || generation !== healthGeneration) {
         return
       }
@@ -373,6 +481,9 @@ export function createSession(deps: SessionDeps = {}): Session {
     abortTranslation()
   }
 
+  if (loadedProfiles === null) {
+    persistProfiles()
+  }
   void checkConnection()
   if (workspace.read().translationStatus === 'waiting') {
     scheduleTranslate()
@@ -391,10 +502,25 @@ export function createSession(deps: SessionDeps = {}): Session {
     setTargetLanguage,
     setIdiomatic,
     setTone,
+    selectProfile,
+    addProfile,
+    updateProfile,
+    deleteProfile,
     clear,
     retry,
     checkConnection,
     dispose,
+  }
+}
+
+function normalizedProfile(id: string, draft: ProfileDraft): Profile {
+  return {
+    id,
+    name: draft.name.trim(),
+    baseUrl: normalizeBaseUrl(draft.baseUrl),
+    apiKey: draft.apiKey.trim(),
+    model: draft.model.trim(),
+    parameters: draft.parameters,
   }
 }
 

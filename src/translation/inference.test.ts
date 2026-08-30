@@ -1,32 +1,95 @@
 import { describe, expect, it, vi } from 'vitest'
-import { CHAT_COMPLETIONS_URL, HEALTH_URL } from './constants'
-import { ConnectionError, createInference, TranslationError } from './inference'
+import {
+  AuthError,
+  ConnectionError,
+  createInference,
+  TranslationError,
+} from './inference'
+import type { Profile } from './profiles'
+
+const localProfile: Profile = {
+  id: 'local',
+  name: 'llama.cpp (ローカル)',
+  baseUrl: 'http://127.0.0.1:8080/v1',
+  apiKey: '',
+  model: '',
+  parameters: {
+    temperature: 0.7,
+    top_p: 0.6,
+    top_k: 20,
+    repeat_penalty: 1.05,
+  },
+}
+
+const remoteProfile: Profile = {
+  id: 'remote',
+  name: 'OpenRouter',
+  baseUrl: 'https://openrouter.ai/api/v1',
+  apiKey: 'or-key',
+  model: 'some/model',
+  parameters: { temperature: 0.3 },
+}
 
 function sseChunk(text: string): string {
   return `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`
 }
 
 describe('Inference', () => {
-  it('checks health at the local llama.cpp endpoint', async () => {
-    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
-      expect(String(input)).toBe(HEALTH_URL)
-      return new Response(JSON.stringify({ status: 'ok' }), { status: 200 })
-    })
-    const inference = createInference(fetchFn)
-    await expect(inference.checkHealth()).resolves.toBe('ready')
-  })
-
-  it('streams chat completions with model-card sampling values', async () => {
+  it("checks health at the profile's models endpoint without auth for an empty key", async () => {
     const fetchFn = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
-        expect(String(input)).toBe(CHAT_COMPLETIONS_URL)
+        expect(String(input)).toBe('http://127.0.0.1:8080/v1/models')
+        expect(init?.headers).toEqual({})
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      },
+    )
+    const inference = createInference(fetchFn)
+    await expect(inference.checkHealth(localProfile)).resolves.toBe('ready')
+  })
+
+  it('sends the API key as a bearer token on health checks', async () => {
+    const fetchFn = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe('https://openrouter.ai/api/v1/models')
+        expect(init?.headers).toEqual({ Authorization: 'Bearer or-key' })
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      },
+    )
+    const inference = createInference(fetchFn)
+    await expect(inference.checkHealth(remoteProfile)).resolves.toBe('ready')
+  })
+
+  it('reports auth-failed for a 401 or 403 health response', async () => {
+    for (const status of [401, 403]) {
+      const fetchFn = vi.fn(async () => new Response('denied', { status }))
+      const inference = createInference(fetchFn)
+      await expect(inference.checkHealth(remoteProfile)).resolves.toBe(
+        'auth-failed',
+      )
+    }
+  })
+
+  it('reports unavailable for other failed health responses', async () => {
+    const fetchFn = vi.fn(async () => new Response('down', { status: 500 }))
+    const inference = createInference(fetchFn)
+    await expect(inference.checkHealth(localProfile)).resolves.toBe(
+      'unavailable',
+    )
+  })
+
+  it("streams chat completions with the profile's parameters, omitting an empty model", async () => {
+    const fetchFn = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe('http://127.0.0.1:8080/v1/chat/completions')
         expect(init?.method).toBe('POST')
+        expect(init?.headers).toEqual({ 'Content-Type': 'application/json' })
         const body = JSON.parse(String(init?.body)) as Record<string, unknown>
         expect(body.stream).toBe(true)
         expect(body.temperature).toBe(0.7)
         expect(body.top_p).toBe(0.6)
         expect(body.top_k).toBe(20)
         expect(body.repeat_penalty).toBe(1.05)
+        expect('model' in body).toBe(false)
         expect(body.messages).toEqual([
           { role: 'user', content: 'Translate: こんにちは' },
         ])
@@ -46,12 +109,93 @@ describe('Inference', () => {
     const inference = createInference(fetchFn)
     const chunks: string[] = []
     for await (const chunk of inference.translate(
+      localProfile,
       [{ role: 'user', content: 'Translate: こんにちは' }],
       new AbortController().signal,
     )) {
       chunks.push(chunk)
     }
     expect(chunks).toEqual(['Hel', 'lo'])
+  })
+
+  it('sends the model name and bearer token for a remote profile', async () => {
+    const fetchFn = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe(
+          'https://openrouter.ai/api/v1/chat/completions',
+        )
+        expect(init?.headers).toEqual({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer or-key',
+        })
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>
+        expect(body.model).toBe('some/model')
+        expect(body.temperature).toBe(0.3)
+        expect(body.stream).toBe(true)
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(sseChunk('Hi')))
+            controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
+            controller.close()
+          },
+        })
+        return new Response(stream, { status: 200 })
+      },
+    )
+
+    const inference = createInference(fetchFn)
+    const chunks: string[] = []
+    for await (const chunk of inference.translate(
+      remoteProfile,
+      [{ role: 'user', content: 'Translate: こんにちは' }],
+      new AbortController().signal,
+    )) {
+      chunks.push(chunk)
+    }
+    expect(chunks).toEqual(['Hi'])
+  })
+
+  it('does not let profile parameters override messages, stream, or model', async () => {
+    const fetchFn = vi.fn(
+      async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>
+        expect(body.stream).toBe(true)
+        expect(body.model).toBe('some/model')
+        expect(body.messages).toEqual([{ role: 'user', content: 'Hi' }])
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
+            controller.close()
+          },
+        })
+        return new Response(stream, { status: 200 })
+      },
+    )
+    const inference = createInference(fetchFn)
+    const overriding: Profile = {
+      ...remoteProfile,
+      parameters: { stream: false, model: 'evil', messages: [] },
+    }
+    for await (const chunk of inference.translate(
+      overriding,
+      [{ role: 'user', content: 'Hi' }],
+      new AbortController().signal,
+    )) {
+      void chunk
+    }
+    expect(fetchFn).toHaveBeenCalled()
+  })
+
+  it('treats a 401 or 403 completion response as an auth error', async () => {
+    for (const status of [401, 403]) {
+      const fetchFn = vi.fn(async () => new Response('denied', { status }))
+      const inference = createInference(fetchFn)
+      await expect(
+        inference
+          .translate(remoteProfile, [], new AbortController().signal)
+          .next(),
+      ).rejects.toBeInstanceOf(AuthError)
+    }
   })
 
   it('treats a stream disconnect after content as a connection error', async () => {
@@ -74,6 +218,7 @@ describe('Inference', () => {
 
     const consume = async () => {
       for await (const chunk of inference.translate(
+        localProfile,
         [],
         new AbortController().signal,
       )) {
@@ -98,7 +243,9 @@ describe('Inference', () => {
     const inference = createInference(fetchFn)
 
     await expect(
-      inference.translate([], new AbortController().signal).next(),
+      inference
+        .translate(localProfile, [], new AbortController().signal)
+        .next(),
     ).rejects.toBeInstanceOf(TranslationError)
   })
 
@@ -115,7 +262,9 @@ describe('Inference', () => {
     const inference = createInference(fetchFn)
 
     await expect(
-      inference.translate([], new AbortController().signal).next(),
+      inference
+        .translate(localProfile, [], new AbortController().signal)
+        .next(),
     ).rejects.toBeInstanceOf(TranslationError)
   })
 
@@ -124,7 +273,9 @@ describe('Inference', () => {
     const inference = createInference(fetchFn)
 
     await expect(
-      inference.translate([], new AbortController().signal).next(),
+      inference
+        .translate(localProfile, [], new AbortController().signal)
+        .next(),
     ).rejects.toBeInstanceOf(TranslationError)
   })
 
@@ -145,7 +296,9 @@ describe('Inference', () => {
     const inference = createInference(fetchFn)
 
     await expect(
-      inference.translate([], new AbortController().signal).next(),
+      inference
+        .translate(localProfile, [], new AbortController().signal)
+        .next(),
     ).rejects.toBeInstanceOf(TranslationError)
   })
 
@@ -165,7 +318,9 @@ describe('Inference', () => {
     const inference = createInference(fetchFn)
 
     await expect(
-      inference.translate([], new AbortController().signal).next(),
+      inference
+        .translate(localProfile, [], new AbortController().signal)
+        .next(),
     ).rejects.toBe(abortError)
   })
 
@@ -175,15 +330,19 @@ describe('Inference', () => {
     })
     const inference = createInference(fetchFn)
     await expect(
-      inference.translate([], new AbortController().signal).next(),
+      inference
+        .translate(localProfile, [], new AbortController().signal)
+        .next(),
     ).rejects.toBeInstanceOf(ConnectionError)
   })
 
-  it('treats an HTTP error from completions as a translation error', async () => {
+  it('treats a non-auth HTTP error from completions as a translation error', async () => {
     const fetchFn = vi.fn(async () => new Response('nope', { status: 500 }))
     const inference = createInference(fetchFn)
     await expect(
-      inference.translate([], new AbortController().signal).next(),
+      inference
+        .translate(localProfile, [], new AbortController().signal)
+        .next(),
     ).rejects.toBeInstanceOf(TranslationError)
   })
 
@@ -191,9 +350,9 @@ describe('Inference', () => {
     const controller = new AbortController()
     const fetchFn = vi.fn(async (_input, init?: RequestInit) => {
       expect(init?.signal).toBe(controller.signal)
-      return new Response('{"status":"ok"}', { status: 200 })
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
     })
-    await createInference(fetchFn).checkHealth(controller.signal)
+    await createInference(fetchFn).checkHealth(localProfile, controller.signal)
     expect(fetchFn).toHaveBeenCalled()
   })
 })
