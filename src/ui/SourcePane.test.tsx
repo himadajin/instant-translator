@@ -121,7 +121,7 @@ describe('SourcePane', () => {
     expect(screen.getByText('4,001 / 4,000')).toBeDefined()
   })
 
-  it('enables the clear action only for non-empty source and forwards user actions', async () => {
+  it('shows the clear action only for non-empty source and forwards user actions', async () => {
     const user = userEvent.setup()
     const onSourceTextChange = vi.fn()
     const onClear = vi.fn()
@@ -132,16 +132,14 @@ describe('SourcePane', () => {
       />,
     )
     const source = screen.getByRole('textbox', { name: '原文' })
-    const clear = screen.getByRole('button', { name: '消去' })
 
-    expect(clear).toHaveProperty('disabled', true)
+    expect(screen.queryByRole('button', { name: '消去' })).toBeNull()
     await user.type(source, 'abc')
     expect(onSourceTextChange).toHaveBeenLastCalledWith('abc')
     expect(source).toHaveProperty('value', 'abc')
-    expect(clear).toHaveProperty('disabled', false)
-    await user.click(clear)
+    await user.click(screen.getByRole('button', { name: '消去' }))
     expect(onClear).toHaveBeenCalledTimes(1)
     expect(source).toHaveProperty('value', '')
-    expect(clear).toHaveProperty('disabled', true)
+    expect(screen.queryByRole('button', { name: '消去' })).toBeNull()
   })
 })
