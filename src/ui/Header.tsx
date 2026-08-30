@@ -72,38 +72,40 @@ export function Header({
           </Typography>
           <Stack
             direction="row"
-            spacing={1}
+            spacing={3}
             sx={{ alignItems: 'center', ml: 'auto' }}
           >
-            {profiles.length > 0 && (
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Select
-                  value={selectedProfileId}
-                  inputProps={{ 'aria-label': 'プロファイル' }}
-                  onChange={(event) => onProfileSelect(event.target.value)}
-                >
-                  {profiles.map((profile) => (
-                    <MenuItem key={profile.id} value={profile.id}>
-                      {profile.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-            <Chip
-              size="small"
-              variant="outlined"
-              color={status.color}
-              label={status.label}
-              role="status"
-              aria-live="polite"
-            />
-            <IconButton
-              aria-label="プロファイル設定を開く"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <SettingsIcon />
-            </IconButton>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              {profiles.length > 0 && (
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <Select
+                    value={selectedProfileId}
+                    inputProps={{ 'aria-label': 'プロファイル' }}
+                    onChange={(event) => onProfileSelect(event.target.value)}
+                  >
+                    {profiles.map((profile) => (
+                      <MenuItem key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+              <IconButton
+                aria-label="プロファイル設定を開く"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <SettingsIcon />
+              </IconButton>
+              <Chip
+                size="small"
+                variant="outlined"
+                color={status.color}
+                label={status.label}
+                role="status"
+                aria-live="polite"
+              />
+            </Stack>
             <ColorModeToggle />
           </Stack>
         </Toolbar>
