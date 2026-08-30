@@ -2,19 +2,20 @@
  * Shared types for the translation workspace UI.
  *
  * These mirror the domain language defined in `CONTEXT.md` and the component
- * boundaries in `docs/internal/specs/components.md`. Translation method and
- * tone are imported from the translation domain so the UI does not redefine
- * their values.
+ * boundaries in `docs/internal/specs/components.md`. Tone is imported from
+ * the translation domain so the UI does not redefine its values.
  */
 
-import type { Tone, TranslationMethod } from '../translation'
+import type {
+  DetectedLanguage,
+  Language,
+  SourceLanguage,
+  Tone,
+} from '../translation'
 
-export type { Tone, TranslationMethod }
+export type { DetectedLanguage, Language, SourceLanguage, Tone }
 
 export type ConnectionStatus = 'ready' | 'checking' | 'unavailable'
-
-/** The direction currently shown in the language direction bar (source -> target). */
-export type TranslationDirection = 'jaToEn' | 'enToJa'
 
 /**
  * The translation pane's display state. `idle` covers both "no source text
@@ -26,6 +27,7 @@ export type TranslationStatus =
   | 'pending'
   | 'streaming'
   | 'done'
+  | 'languageConflict'
   | 'connectionError'
   | 'translationError'
   | 'overLimit'
@@ -55,17 +57,14 @@ export interface WorkspaceProps {
   /** Clears the source text. Only invoked while `sourceText` is non-empty. */
   onClear: () => void
 
-  /** The direction currently resolved for display (source -> target). */
-  direction: TranslationDirection
-  /** `true` when the direction is user-fixed; `false` while auto-detecting. */
-  isDirectionFixed: boolean
-  /** Invoked by the `⇄` control: swaps and fixes the direction. */
-  onSwapDirection: () => void
-  /** Invoked by pressing the `FIXED` label: returns to auto-detection. */
-  onReleaseFixedDirection: () => void
+  sourceLanguage: SourceLanguage
+  targetLanguage: Language
+  detectedLanguage: DetectedLanguage
+  onSourceLanguageChange: (language: SourceLanguage) => void
+  onTargetLanguageChange: (language: Language) => void
 
-  translationMethod: TranslationMethod
-  onTranslationMethodChange: (method: TranslationMethod) => void
+  idiomatic: boolean
+  onIdiomaticChange: (idiomatic: boolean) => void
 
   tone: Tone
   onToneChange: (tone: Tone) => void

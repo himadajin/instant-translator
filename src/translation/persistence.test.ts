@@ -23,11 +23,11 @@ const sample: WorkState = {
   completedTranslation: 'Hello',
   completedSource: 'こんにちは',
   completedDirection: 'ja-to-en',
-  completedMethod: 'standard',
+  completedIdiomatic: false,
   completedTone: 'chat',
-  direction: 'ja-to-en',
-  directionControl: 'auto',
-  method: 'standard',
+  sourceLanguage: 'auto',
+  targetLanguage: 'english',
+  idiomatic: false,
   tone: 'chat',
 }
 
@@ -57,9 +57,9 @@ describe('Persistence', () => {
       JSON.stringify({
         source: sample.source,
         completedTranslation: sample.completedTranslation,
-        direction: sample.direction,
-        directionControl: sample.directionControl,
-        method: sample.method,
+        direction: 'ja-to-en',
+        directionControl: 'auto',
+        method: 'standard',
         tone: sample.tone,
       }),
     )
@@ -74,14 +74,29 @@ describe('Persistence', () => {
       completedTranslation: '',
       completedSource: '',
       completedDirection: null,
-      completedMethod: null,
+      completedIdiomatic: null,
       completedTone: null,
-      direction: 'ja-to-en',
-      directionControl: 'auto',
-      method: 'standard',
+      sourceLanguage: 'auto',
+      targetLanguage: 'english',
+      idiomatic: false,
       tone: 'standard',
     }
     persistence.save(empty)
     expect(persistence.load()).toEqual(empty)
+  })
+
+  it('rejects equal explicitly selected source and target languages', () => {
+    const storage = memoryStorage()
+    const persistence = createPersistence(storage)
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...sample,
+        sourceLanguage: 'english',
+        targetLanguage: 'english',
+      }),
+    )
+
+    expect(persistence.load()).toBeNull()
   })
 })

@@ -33,14 +33,22 @@ function isWorkState(value: unknown): value is WorkState {
   const completedTranslation = record.completedTranslation
   const completedSource = record.completedSource
   const completedDirection = record.completedDirection
-  const completedMethod = record.completedMethod
+  const completedIdiomatic = record.completedIdiomatic
   const completedTone = record.completedTone
+  const hasValidLanguageSelection =
+    (record.sourceLanguage === 'auto' ||
+      record.sourceLanguage === 'japanese' ||
+      record.sourceLanguage === 'english') &&
+    (record.targetLanguage === 'japanese' ||
+      record.targetLanguage === 'english') &&
+    (record.sourceLanguage === 'auto' ||
+      record.sourceLanguage !== record.targetLanguage)
 
   const hasNoCompletedTranslation =
     completedTranslation === '' &&
     completedSource === '' &&
     completedDirection === null &&
-    completedMethod === null &&
+    completedIdiomatic === null &&
     completedTone === null
   const hasCompletedTranslation =
     typeof completedTranslation === 'string' &&
@@ -48,7 +56,7 @@ function isWorkState(value: unknown): value is WorkState {
     typeof completedSource === 'string' &&
     completedSource.length > 0 &&
     (completedDirection === 'ja-to-en' || completedDirection === 'en-to-ja') &&
-    (completedMethod === 'standard' || completedMethod === 'idiomatic') &&
+    typeof completedIdiomatic === 'boolean' &&
     (completedTone === 'standard' ||
       completedTone === 'chat' ||
       completedTone === 'technical' ||
@@ -57,10 +65,8 @@ function isWorkState(value: unknown): value is WorkState {
   return (
     typeof record.source === 'string' &&
     (hasNoCompletedTranslation || hasCompletedTranslation) &&
-    (record.direction === 'ja-to-en' || record.direction === 'en-to-ja') &&
-    (record.directionControl === 'auto' ||
-      record.directionControl === 'fixed') &&
-    (record.method === 'standard' || record.method === 'idiomatic') &&
+    hasValidLanguageSelection &&
+    typeof record.idiomatic === 'boolean' &&
     (record.tone === 'standard' ||
       record.tone === 'chat' ||
       record.tone === 'technical' ||

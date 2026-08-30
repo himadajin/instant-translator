@@ -8,7 +8,7 @@ describe('Prompts', () => {
     const messages = buildMessages({
       source,
       direction: 'ja-to-en',
-      method: 'standard',
+      idiomatic: false,
       tone: 'standard',
     })
 
@@ -34,7 +34,7 @@ describe('Prompts', () => {
     const messages = buildMessages({
       source: 'Hello.',
       direction: 'en-to-ja',
-      method: 'standard',
+      idiomatic: false,
       tone: 'standard',
     })
 
@@ -48,7 +48,7 @@ describe('Prompts', () => {
       buildMessages({
         source: 'Hello.',
         direction: 'en-to-ja',
-        method: 'standard',
+        idiomatic: false,
         tone: 'standard',
       }).at(0)?.content ?? ''
 
@@ -62,32 +62,36 @@ describe('Prompts', () => {
     expect(tasks.at(-1)).toContain('Translate the entire [Source Text]')
   })
 
-  it('describes the method and the tone as tasks', () => {
-    const content = (
-      input: Parameters<typeof buildMessages>[0],
-    ): string => buildMessages(input).at(0)?.content ?? ''
+  it('always translates naturally and applies idiomatic polishing when enabled', () => {
+    const content = (input: Parameters<typeof buildMessages>[0]): string =>
+      buildMessages(input).at(0)?.content ?? ''
 
     const base = {
       source: 'Hello.',
       direction: 'en-to-ja',
     } as const
 
-    expect(content({ ...base, method: 'standard', tone: 'standard' })).toContain(
+    expect(content({ ...base, idiomatic: false, tone: 'standard' })).toContain(
       "Write natural Japanese that preserves the source's meaning, information, and nuance.",
     )
-    expect(content({ ...base, method: 'standard', tone: 'standard' })).toContain(
-      "Preserve the source's own tone.",
-    )
-    expect(content({ ...base, method: 'idiomatic', tone: 'chat' })).toContain(
+    expect(
+      content({ ...base, idiomatic: false, tone: 'standard' }),
+    ).not.toContain(
       'turning incomplete or messy wording into well-formed writing',
     )
-    expect(content({ ...base, method: 'idiomatic', tone: 'chat' })).toContain(
+    expect(content({ ...base, idiomatic: false, tone: 'standard' })).toContain(
+      "Preserve the source's own tone.",
+    )
+    expect(content({ ...base, idiomatic: true, tone: 'chat' })).toContain(
+      'turning incomplete or messy wording into well-formed writing',
+    )
+    expect(content({ ...base, idiomatic: true, tone: 'chat' })).toContain(
       'workplace-chat wording suitable for Slack or Teams',
     )
-    expect(content({ ...base, method: 'standard', tone: 'technical' })).toContain(
+    expect(content({ ...base, idiomatic: false, tone: 'technical' })).toContain(
       'Markdown structure intact',
     )
-    expect(content({ ...base, method: 'standard', tone: 'casual' })).toContain(
+    expect(content({ ...base, idiomatic: false, tone: 'casual' })).toContain(
       'friendly wording suitable for a friend or social media',
     )
   })

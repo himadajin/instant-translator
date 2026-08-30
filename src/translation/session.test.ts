@@ -140,7 +140,7 @@ describe('Session', () => {
     vi.useRealTimers()
   })
 
-  it('1. translates Japanese toward English and English toward Japanese without calling Inference to detect', async () => {
+  it('1. translates toward the selected target without calling Inference to detect', async () => {
     const harness = createFetchHarness()
     const session = createSession({
       fetch: harness.fetchFn,
@@ -149,7 +149,8 @@ describe('Session', () => {
     await flush()
 
     session.setSource(japaneseSource)
-    expect(session.getSnapshot().direction).toBe('ja-to-en')
+    expect(session.getSnapshot().detectedLanguage).toBe('japanese')
+    expect(session.getSnapshot().targetLanguage).toBe('english')
     expect(harness.completions).toHaveLength(0)
 
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
@@ -160,8 +161,10 @@ describe('Session', () => {
     harness.streams[0]?.done()
     await flush()
 
+    session.setTargetLanguage('japanese')
     session.setSource(englishSource)
-    expect(session.getSnapshot().direction).toBe('en-to-ja')
+    expect(session.getSnapshot().detectedLanguage).toBe('english')
+    expect(session.getSnapshot().targetLanguage).toBe('japanese')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     expect(harness.completions).toHaveLength(2)
@@ -172,7 +175,7 @@ describe('Session', () => {
     session.dispose()
   })
 
-  it('2. keeps the settled direction for short or mixed input, defaulting to Japanese to English', async () => {
+  it('2. treats ambiguous automatic input as the language opposite the selected target', async () => {
     const harness = createFetchHarness()
     const session = createSession({
       fetch: harness.fetchFn,
@@ -181,27 +184,28 @@ describe('Session', () => {
     await flush()
 
     session.setSource('Hi')
-    expect(session.getSnapshot().direction).toBe('ja-to-en')
+    expect(session.getSnapshot().detectedLanguage).toBe('ambiguous')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     harness.streams[0]?.done()
     await flush()
 
+    session.setTargetLanguage('japanese')
     session.setSource(englishSource)
-    expect(session.getSnapshot().direction).toBe('en-to-ja')
+    expect(session.getSnapshot().detectedLanguage).toBe('english')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     harness.streams[1]?.done()
     await flush()
 
     session.setSource('This is 日本語の test case')
-    expect(session.getSnapshot().direction).toBe('en-to-ja')
+    expect(session.getSnapshot().detectedLanguage).toBe('ambiguous')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     session.dispose()
   })
 
-  it('3. ignores Detection while fixed, locks on swap, and re-detects after unlock', async () => {
+  it('3. supports explicit source selection and blocks equal source and target languages', async () => {
     const harness = createFetchHarness()
     const session = createSession({
       fetch: harness.fetchFn,
@@ -215,35 +219,30 @@ describe('Session', () => {
     harness.streams[0]?.done()
     await flush()
 
-    session.swapDirection()
-    expect(session.getSnapshot().direction).toBe('en-to-ja')
-    expect(session.getSnapshot().directionControl).toBe('fixed')
+    session.setTargetLanguage('japanese')
+    session.setSourceLanguage('english')
+    expect(session.getSnapshot().sourceLanguage).toBe('english')
+    expect(session.getSnapshot().targetLanguage).toBe('japanese')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     harness.streams[1]?.done()
     await flush()
 
-    session.swapDirection()
-    expect(session.getSnapshot().direction).toBe('ja-to-en')
-    expect(session.getSnapshot().directionControl).toBe('fixed')
+    session.setSource(japaneseSource)
+    expect(session.getSnapshot().detectedLanguage).toBe('japanese')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     harness.streams[2]?.done()
     await flush()
 
-    session.setSource(englishSource)
-    expect(session.getSnapshot().direction).toBe('ja-to-en')
-    expect(session.getSnapshot().directionControl).toBe('fixed')
-    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
-    await flush()
-    harness.streams[3]?.done()
-    await flush()
+    session.setSourceLanguage('japanese')
+    expect(session.getSnapshot().sourceLanguage).toBe('english')
+    session.setSourceLanguage('auto')
+    expect(session.getSnapshot().translationStatus).toBe('language-conflict')
+    expect(harness.completions).toHaveLength(3)
 
-    session.unlockDirection()
-    expect(session.getSnapshot().directionControl).toBe('auto')
-    expect(session.getSnapshot().direction).toBe('en-to-ja')
-    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
-    await flush()
+    session.setTargetLanguage('english')
+    expect(session.getSnapshot().translationStatus).toBe('waiting')
     session.dispose()
   })
 
@@ -464,6 +463,7 @@ describe('Session', () => {
       storage: memoryStorage(),
     })
     await flush()
+    session.setTargetLanguage('japanese')
 
     const exactlyAtLimit = 'e\u0301'.repeat(INPUT_LIMIT)
     session.setSource(exactlyAtLimit)
@@ -490,7 +490,7 @@ describe('Session', () => {
     await flush()
 
     session.setSource(japaneseSource)
-    session.setMethod('idiomatic')
+    session.setIdiomatic(true)
     session.setTone('technical')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
@@ -501,7 +501,7 @@ describe('Session', () => {
     const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? '{}') as WorkState
     expect(saved.source).toBe(japaneseSource)
     expect(saved.completedTranslation).toBe('Hello')
-    expect(saved.method).toBe('idiomatic')
+    expect(saved.idiomatic).toBe(true)
     expect(saved.tone).toBe('technical')
     session.dispose()
 
@@ -512,7 +512,7 @@ describe('Session', () => {
     await flush()
     expect(restored.getSnapshot().source).toBe(japaneseSource)
     expect(restored.getSnapshot().translation).toBe('Hello')
-    expect(restored.getSnapshot().method).toBe('idiomatic')
+    expect(restored.getSnapshot().idiomatic).toBe(true)
     expect(restored.getSnapshot().tone).toBe('technical')
     expect(restored.getSnapshot().translationStatus).toBe('complete')
     restored.dispose()
@@ -530,7 +530,7 @@ describe('Session', () => {
     ) as WorkState
     expect(cleared.source).toBe('')
     expect(cleared.completedTranslation).toBe('')
-    expect(cleared.method).toBe('idiomatic')
+    expect(cleared.idiomatic).toBe(true)
     expect(cleared.tone).toBe('technical')
     live.dispose()
   })
@@ -575,6 +575,7 @@ describe('Session', () => {
     expect(session.getSnapshot().source).toBe(japaneseSource)
 
     mode = 'translate'
+    session.setTargetLanguage('japanese')
     session.setSource(englishSource)
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
@@ -645,16 +646,17 @@ describe('Session', () => {
     session.dispose()
   })
 
-  it('starts with standard method and standard tone', async () => {
+  it('starts with idiomatic disabled and standard tone', async () => {
     const session = createSession({
       fetch: createFetchHarness().fetchFn,
       storage: memoryStorage(),
     })
     await flush()
-    expect(session.getSnapshot().method).toBe('standard')
+    expect(session.getSnapshot().idiomatic).toBe(false)
     expect(session.getSnapshot().tone).toBe('standard')
-    expect(session.getSnapshot().directionControl).toBe('auto')
-    expect(session.getSnapshot().direction).toBe('ja-to-en')
+    expect(session.getSnapshot().sourceLanguage).toBe('auto')
+    expect(session.getSnapshot().targetLanguage).toBe('english')
+    expect(session.getSnapshot().detectedLanguage).toBe('ambiguous')
     session.dispose()
   })
 

@@ -1,33 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { createSession } from './translation'
-import type {
-  Session,
-  TranslationDirection as SessionDirection,
-  WorkspaceSnapshot,
-} from './translation'
+import type { Session, WorkspaceSnapshot } from './translation'
 import { INPUT_LIMIT, INPUT_WARN_AT } from './translation'
 import { Workspace } from './ui'
-import type {
-  TranslationDirection as UiDirection,
-  TranslationStatus as UiTranslationStatus,
-} from './ui'
+import type { TranslationStatus as UiTranslationStatus } from './ui'
 
 const INITIAL_SNAPSHOT: WorkspaceSnapshot = {
   source: '',
   translation: '',
   translationIsCurrent: true,
-  direction: 'ja-to-en',
-  directionControl: 'auto',
-  method: 'standard',
+  sourceLanguage: 'auto',
+  targetLanguage: 'english',
+  detectedLanguage: 'ambiguous',
+  idiomatic: false,
   tone: 'standard',
   translationStatus: 'idle',
   connectionStatus: 'checking',
   sourceLength: 0,
   overLimit: false,
-}
-
-function mapDirection(direction: SessionDirection): UiDirection {
-  return direction === 'ja-to-en' ? 'jaToEn' : 'enToJa'
 }
 
 function mapTranslationStatus(
@@ -47,6 +37,8 @@ function mapTranslationStatus(
       return snapshot.translationIsCurrent ? 'streaming' : 'pending'
     case 'complete':
       return 'done'
+    case 'language-conflict':
+      return 'languageConflict'
     case 'connection-failed':
       return 'connectionError'
     case 'translation-failed':
@@ -70,9 +62,10 @@ function toWorkspaceView(snapshot: WorkspaceSnapshot) {
     overLimit: snapshot.overLimit,
     inputLimit: INPUT_LIMIT,
     inputWarnAt: INPUT_WARN_AT,
-    direction: mapDirection(snapshot.direction),
-    isDirectionFixed: snapshot.directionControl === 'fixed',
-    translationMethod: snapshot.method,
+    sourceLanguage: snapshot.sourceLanguage,
+    targetLanguage: snapshot.targetLanguage,
+    detectedLanguage: snapshot.detectedLanguage,
+    idiomatic: snapshot.idiomatic,
     tone: snapshot.tone,
     translationStatus,
     translatedText,
@@ -103,10 +96,14 @@ export default function App() {
       {...view}
       onSourceTextChange={(text) => sessionRef.current?.setSource(text)}
       onClear={() => sessionRef.current?.clear()}
-      onSwapDirection={() => sessionRef.current?.swapDirection()}
-      onReleaseFixedDirection={() => sessionRef.current?.unlockDirection()}
-      onTranslationMethodChange={(method) =>
-        sessionRef.current?.setMethod(method)
+      onSourceLanguageChange={(language) =>
+        sessionRef.current?.setSourceLanguage(language)
+      }
+      onTargetLanguageChange={(language) =>
+        sessionRef.current?.setTargetLanguage(language)
+      }
+      onIdiomaticChange={(idiomatic) =>
+        sessionRef.current?.setIdiomatic(idiomatic)
       }
       onToneChange={(tone) => sessionRef.current?.setTone(tone)}
       onCopy={async () => {

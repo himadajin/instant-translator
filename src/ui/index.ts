@@ -1,9 +1,10 @@
 export { Workspace } from './Workspace'
 export type {
   ConnectionStatus,
+  DetectedLanguage,
+  Language,
+  SourceLanguage,
   Tone,
-  TranslationDirection,
-  TranslationMethod,
   TranslationStatus,
   WorkspaceProps,
 } from './types'
