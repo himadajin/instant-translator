@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
+import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
+import ClearIcon from '@mui/icons-material/Clear'
 import { BODY_TEXT_SX } from './bodyText'
 import { SOURCE_LANGUAGE_OPTIONS } from './languages'
 import type { Language, SourceLanguage } from './types'
@@ -92,14 +94,20 @@ export function SourcePane({
             ))}
           </Select>
         </FormControl>
-        <Button
-          size="small"
-          onClick={onClear}
-          disabled={sourceLength === 0}
-          sx={{ ml: 'auto' }}
-        >
-          消去
-        </Button>
+        {/* Hidden while the source is empty: the row height comes from the
+            language Select, so the button appearing does not move the body. */}
+        {sourceLength > 0 && (
+          <Tooltip title="消去">
+            <IconButton
+              size="small"
+              aria-label="消去"
+              onClick={onClear}
+              sx={{ ml: 'auto' }}
+            >
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
 
       <InputBase
