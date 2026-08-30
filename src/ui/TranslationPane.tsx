@@ -119,11 +119,14 @@ export function TranslationPane({
 
       <Stack
         direction="row"
+        useFlexGap
         spacing={1}
         sx={{
           alignItems: 'center',
+          flexWrap: 'wrap',
           px: 2,
           pt: 2,
+          pb: 1,
         }}
       >
         <Typography variant="overline" color="text.secondary">
@@ -148,29 +151,6 @@ export function TranslationPane({
             ))}
           </Select>
         </FormControl>
-        <Button
-          size="small"
-          startIcon={<ContentCopyIcon fontSize="small" />}
-          onClick={handleCopy}
-          disabled={translationStatus !== 'done'}
-          sx={{ ml: 'auto' }}
-        >
-          {isCopied ? 'コピーしました' : 'コピー'}
-        </Button>
-      </Stack>
-
-      <Stack
-        direction="row"
-        useFlexGap
-        spacing={2}
-        sx={{
-          minHeight: 44,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          px: 2,
-          py: 0.5,
-        }}
-      >
         <FormControlLabel
           control={
             <Checkbox
@@ -197,6 +177,15 @@ export function TranslationPane({
             ))}
           </Select>
         </FormControl>
+        <Button
+          size="small"
+          startIcon={<ContentCopyIcon fontSize="small" />}
+          onClick={handleCopy}
+          disabled={translationStatus !== 'done'}
+          sx={{ ml: 'auto' }}
+        >
+          {isCopied ? 'コピーしました' : 'コピー'}
+        </Button>
       </Stack>
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pb: 2 }}>
