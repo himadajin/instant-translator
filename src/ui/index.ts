@@ -1,7 +1,6 @@
 export { Workspace } from './Workspace'
 export type {
   ConnectionStatus,
-  DetectedLanguage,
   Language,
   Profile,
   ProfileDraft,

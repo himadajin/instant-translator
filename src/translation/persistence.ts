@@ -89,22 +89,24 @@ function isWorkState(value: unknown): value is WorkState {
   const record = value as Record<string, unknown>
   const completedTranslation = record.completedTranslation
   const completedSource = record.completedSource
-  const completedDirection = record.completedDirection
+  const completedSourceLanguage = record.completedSourceLanguage
+  const completedTargetLanguage = record.completedTargetLanguage
   const completedIdiomatic = record.completedIdiomatic
   const completedTone = record.completedTone
   const hasValidLanguageSelection =
-    (record.sourceLanguage === 'auto' ||
+    (record.sourceLanguage === 'unspecified' ||
       record.sourceLanguage === 'japanese' ||
       record.sourceLanguage === 'english') &&
     (record.targetLanguage === 'japanese' ||
       record.targetLanguage === 'english') &&
-    (record.sourceLanguage === 'auto' ||
+    (record.sourceLanguage === 'unspecified' ||
       record.sourceLanguage !== record.targetLanguage)
 
   const hasNoCompletedTranslation =
     completedTranslation === '' &&
     completedSource === '' &&
-    completedDirection === null &&
+    completedSourceLanguage === null &&
+    completedTargetLanguage === null &&
     completedIdiomatic === null &&
     completedTone === null
   const hasCompletedTranslation =
@@ -112,7 +114,11 @@ function isWorkState(value: unknown): value is WorkState {
     completedTranslation.length > 0 &&
     typeof completedSource === 'string' &&
     completedSource.length > 0 &&
-    (completedDirection === 'ja-to-en' || completedDirection === 'en-to-ja') &&
+    (completedSourceLanguage === 'unspecified' ||
+      completedSourceLanguage === 'japanese' ||
+      completedSourceLanguage === 'english') &&
+    (completedTargetLanguage === 'japanese' ||
+      completedTargetLanguage === 'english') &&
     typeof completedIdiomatic === 'boolean' &&
     (completedTone === 'standard' ||
       completedTone === 'chat' ||

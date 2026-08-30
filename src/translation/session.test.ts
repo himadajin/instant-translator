@@ -153,7 +153,6 @@ describe('Session', () => {
     await flush()
 
     session.setSource(japaneseSource)
-    expect(session.getSnapshot().detectedLanguage).toBe('japanese')
     expect(session.getSnapshot().targetLanguage).toBe('english')
     expect(harness.completions).toHaveLength(0)
 
@@ -167,7 +166,6 @@ describe('Session', () => {
 
     session.setTargetLanguage('japanese')
     session.setSource(englishSource)
-    expect(session.getSnapshot().detectedLanguage).toBe('english')
     expect(session.getSnapshot().targetLanguage).toBe('japanese')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
@@ -179,7 +177,7 @@ describe('Session', () => {
     session.dispose()
   })
 
-  it('2. treats ambiguous automatic input as the language opposite the selected target', async () => {
+  it('2. translates short and mixed-script input as-is with an unspecified source', async () => {
     const harness = createFetchHarness()
     const session = createSession({
       fetch: harness.fetchFn,
@@ -188,24 +186,19 @@ describe('Session', () => {
     await flush()
 
     session.setSource('Hi')
-    expect(session.getSnapshot().detectedLanguage).toBe('ambiguous')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
     harness.streams[0]?.done()
     await flush()
 
     session.setTargetLanguage('japanese')
-    session.setSource(englishSource)
-    expect(session.getSnapshot().detectedLanguage).toBe('english')
-    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
-    await flush()
-    harness.streams[1]?.done()
-    await flush()
-
     session.setSource('This is 日本語の test case')
-    expect(session.getSnapshot().detectedLanguage).toBe('ambiguous')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
+    expect(harness.completions).toHaveLength(2)
+    expect(requestedSource(harness.completions[1])).toBe(
+      'This is 日本語の test case',
+    )
     session.dispose()
   })
 
@@ -229,24 +222,26 @@ describe('Session', () => {
     expect(session.getSnapshot().targetLanguage).toBe('japanese')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
+    expect(harness.completions[1]?.body.messages[0]?.content).toContain(
+      'from English into Japanese',
+    )
     harness.streams[1]?.done()
-    await flush()
-
-    session.setSource(japaneseSource)
-    expect(session.getSnapshot().detectedLanguage).toBe('japanese')
-    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
-    await flush()
-    harness.streams[2]?.done()
     await flush()
 
     session.setSourceLanguage('japanese')
     expect(session.getSnapshot().sourceLanguage).toBe('english')
-    session.setSourceLanguage('auto')
-    expect(session.getSnapshot().translationStatus).toBe('language-conflict')
-    expect(harness.completions).toHaveLength(3)
-
     session.setTargetLanguage('english')
-    expect(session.getSnapshot().translationStatus).toBe('waiting')
+    expect(session.getSnapshot().targetLanguage).toBe('japanese')
+
+    session.setSourceLanguage('unspecified')
+    expect(session.getSnapshot().sourceLanguage).toBe('unspecified')
+    session.setTargetLanguage('english')
+    expect(session.getSnapshot().targetLanguage).toBe('english')
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(
+      harness.completions.at(-1)?.body.messages[0]?.content,
+    ).not.toContain(' from ')
     session.dispose()
   })
 
@@ -658,9 +653,8 @@ describe('Session', () => {
     await flush()
     expect(session.getSnapshot().idiomatic).toBe(false)
     expect(session.getSnapshot().tone).toBe('standard')
-    expect(session.getSnapshot().sourceLanguage).toBe('auto')
+    expect(session.getSnapshot().sourceLanguage).toBe('unspecified')
     expect(session.getSnapshot().targetLanguage).toBe('english')
-    expect(session.getSnapshot().detectedLanguage).toBe('ambiguous')
     session.dispose()
   })
 

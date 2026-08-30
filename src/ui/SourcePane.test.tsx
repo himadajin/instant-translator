@@ -17,9 +17,8 @@ function renderSource(
     overLimit: false,
     inputLimit: 4000,
     inputWarnAt: 3200,
-    sourceLanguage: 'auto',
+    sourceLanguage: 'unspecified',
     targetLanguage: 'english',
-    detectedLanguage: 'ambiguous',
     onSourceLanguageChange: vi.fn(),
     onSourceTextChange: vi.fn(),
     onClear: vi.fn(),
@@ -42,9 +41,8 @@ function ControlledSourcePane({
       overLimit={false}
       inputLimit={4000}
       inputWarnAt={3200}
-      sourceLanguage="auto"
+      sourceLanguage="unspecified"
       targetLanguage="english"
-      detectedLanguage="ambiguous"
       onSourceLanguageChange={vi.fn()}
       onSourceTextChange={(nextSourceText) => {
         onSourceTextChange(nextSourceText)
@@ -59,17 +57,16 @@ function ControlledSourcePane({
 }
 
 describe('SourcePane', () => {
-  it('shows the detected language and disables the selected target language', async () => {
+  it('defaults to the unspecified source and disables the selected target language', async () => {
     const user = userEvent.setup()
     renderSource({
       sourceText: 'Hello, world.',
       sourceLength: 13,
-      detectedLanguage: 'english',
     })
 
     expect(
       screen.getByRole('combobox', { name: '原文の言語' }).textContent,
-    ).toBe('自動判定 (English)')
+    ).toBe('指定しない')
     await user.click(screen.getByRole('combobox', { name: '原文の言語' }))
     expect(
       screen

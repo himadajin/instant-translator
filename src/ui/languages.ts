@@ -9,7 +9,7 @@ export const SOURCE_LANGUAGE_OPTIONS: readonly {
   value: SourceLanguage
   label: string
 }[] = [
-  { value: 'auto', label: '自動判定' },
+  { value: 'unspecified', label: '指定しない' },
   { value: 'japanese', label: LANGUAGE_NAMES.japanese },
   { value: 'english', label: LANGUAGE_NAMES.english },
 ]

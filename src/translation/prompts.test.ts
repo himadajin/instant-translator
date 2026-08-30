@@ -7,7 +7,8 @@ describe('Prompts', () => {
   it('sends a single user message with the source first and the tasks after', () => {
     const messages = buildMessages({
       source,
-      direction: 'ja-to-en',
+      sourceLanguage: 'unspecified',
+      targetLanguage: 'english',
       idiomatic: false,
       tone: 'standard',
     })
@@ -30,10 +31,11 @@ describe('Prompts', () => {
     expect(content).toContain('Translate the entire [Source Text] into English')
   })
 
-  it('targets Japanese for the English to Japanese direction', () => {
+  it('targets the selected translation language', () => {
     const messages = buildMessages({
       source: 'Hello.',
-      direction: 'en-to-ja',
+      sourceLanguage: 'unspecified',
+      targetLanguage: 'japanese',
       idiomatic: false,
       tone: 'standard',
     })
@@ -43,11 +45,36 @@ describe('Prompts', () => {
     )
   })
 
+  it('omits the source language when unspecified and names it when selected', () => {
+    const unspecified =
+      buildMessages({
+        source: 'Hello.',
+        sourceLanguage: 'unspecified',
+        targetLanguage: 'japanese',
+        idiomatic: false,
+        tone: 'standard',
+      }).at(0)?.content ?? ''
+    expect(unspecified).not.toContain(' from ')
+
+    const specified =
+      buildMessages({
+        source: 'Hello.',
+        sourceLanguage: 'english',
+        targetLanguage: 'japanese',
+        idiomatic: false,
+        tone: 'standard',
+      }).at(0)?.content ?? ''
+    expect(specified).toContain(
+      'Translate the entire [Source Text] from English into Japanese',
+    )
+  })
+
   it('lists the tasks as a numbered sequence', () => {
     const content =
       buildMessages({
         source: 'Hello.',
-        direction: 'en-to-ja',
+        sourceLanguage: 'unspecified',
+        targetLanguage: 'japanese',
         idiomatic: false,
         tone: 'standard',
       }).at(0)?.content ?? ''
@@ -68,7 +95,8 @@ describe('Prompts', () => {
 
     const base = {
       source: 'Hello.',
-      direction: 'en-to-ja',
+      sourceLanguage: 'unspecified',
+      targetLanguage: 'japanese',
     } as const
 
     expect(content({ ...base, idiomatic: false, tone: 'standard' })).toContain(

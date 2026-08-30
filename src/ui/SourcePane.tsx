@@ -9,8 +9,8 @@ import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { BODY_TEXT_SX } from './bodyText'
-import { LANGUAGE_NAMES, SOURCE_LANGUAGE_OPTIONS } from './languages'
-import type { DetectedLanguage, Language, SourceLanguage } from './types'
+import { SOURCE_LANGUAGE_OPTIONS } from './languages'
+import type { Language, SourceLanguage } from './types'
 
 export function SourcePane({
   sourceText,
@@ -20,7 +20,6 @@ export function SourcePane({
   inputWarnAt,
   sourceLanguage,
   targetLanguage,
-  detectedLanguage,
   onSourceLanguageChange,
   onSourceTextChange,
   onClear,
@@ -32,18 +31,11 @@ export function SourcePane({
   inputWarnAt: number
   sourceLanguage: SourceLanguage
   targetLanguage: Language
-  detectedLanguage: DetectedLanguage
   onSourceLanguageChange: (language: SourceLanguage) => void
   onSourceTextChange: (text: string) => void
   onClear: () => void
 }) {
   const [isInputFocused, setIsInputFocused] = useState(false)
-  const detectedLabel =
-    sourceLanguage === 'auto' &&
-    detectedLanguage !== 'ambiguous' &&
-    sourceLength > 0
-      ? LANGUAGE_NAMES[detectedLanguage]
-      : ''
   const counterSx = overLimit
     ? { color: 'error.main' }
     : sourceLength > inputWarnAt
@@ -86,14 +78,6 @@ export function SourcePane({
           <Select
             value={sourceLanguage}
             inputProps={{ 'aria-label': '原文の言語' }}
-            renderValue={(value) => {
-              const label = SOURCE_LANGUAGE_OPTIONS.find(
-                (option) => option.value === value,
-              )!.label
-              return value === 'auto' && detectedLabel
-                ? `${label} (${detectedLabel})`
-                : label
-            }}
             onChange={(event) =>
               onSourceLanguageChange(event.target.value as SourceLanguage)
             }

@@ -7,7 +7,6 @@
  */
 
 import type {
-  DetectedLanguage,
   Language,
   Profile,
   ProfileDraft,
@@ -15,14 +14,7 @@ import type {
   Tone,
 } from '../translation'
 
-export type {
-  DetectedLanguage,
-  Language,
-  Profile,
-  ProfileDraft,
-  SourceLanguage,
-  Tone,
-}
+export type { Language, Profile, ProfileDraft, SourceLanguage, Tone }
 
 export type ConnectionStatus =
   'ready' | 'checking' | 'unavailable' | 'auth-failed'
@@ -37,7 +29,6 @@ export type TranslationStatus =
   | 'pending'
   | 'streaming'
   | 'done'
-  | 'languageConflict'
   | 'connectionError'
   | 'authError'
   | 'translationError'
@@ -80,7 +71,6 @@ export interface WorkspaceProps {
 
   sourceLanguage: SourceLanguage
   targetLanguage: Language
-  detectedLanguage: DetectedLanguage
   onSourceLanguageChange: (language: SourceLanguage) => void
   onTargetLanguageChange: (language: Language) => void
 
