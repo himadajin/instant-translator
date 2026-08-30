@@ -88,14 +88,24 @@ describe('SourcePane', () => {
     expect(onSourceLanguageChange).toHaveBeenCalledWith('english')
   })
 
+  it('hides the counter until the source passes the warning threshold', () => {
+    renderSource({
+      sourceText: 'この原文の長さとは異なる値',
+      sourceLength: 3200,
+    })
+
+    expect(screen.queryByText('3,200 / 4,000')).toBeNull()
+  })
+
   it('renders the supplied grapheme count and input limit without recounting source text', () => {
     renderSource({
       sourceText: 'この原文の長さとは異なる値',
-      sourceLength: 123,
+      sourceLength: 4001,
       inputLimit: 5000,
+      inputWarnAt: 4000,
     })
 
-    expect(screen.getByText('123 / 5,000').textContent).toBe('123 / 5,000')
+    expect(screen.getByText('4,001 / 5,000').textContent).toBe('4,001 / 5,000')
   })
 
   it('shows the exact over-limit amount alongside the counter', () => {

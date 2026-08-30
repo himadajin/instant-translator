@@ -36,11 +36,10 @@ export function SourcePane({
   onClear: () => void
 }) {
   const [isInputFocused, setIsInputFocused] = useState(false)
+  const showCounter = sourceLength > inputWarnAt
   const counterSx = overLimit
     ? { color: 'error.main' }
-    : sourceLength > inputWarnAt
-      ? { color: 'warning.main', fontWeight: 500 }
-      : { color: 'text.secondary' }
+    : { color: 'warning.main', fontWeight: 500 }
 
   return (
     <Paper
@@ -124,6 +123,8 @@ export function SourcePane({
         }}
       />
 
+      {/* The band keeps one caption line of height even while empty so the
+          counter appearing at the warning threshold does not move the body. */}
       <Stack
         direction="row"
         spacing={2}
@@ -132,18 +133,22 @@ export function SourcePane({
           justifyContent: 'space-between',
           px: 2,
           pb: 1.5,
+          typography: 'caption',
+          minHeight: '1lh',
         }}
       >
-        <Typography variant="caption" color="error.main">
-          {overLimit
-            ? `原文が ${inputLimit.toLocaleString()} 文字を ${(
-                sourceLength - inputLimit
-              ).toLocaleString()} 文字超過しています`
-            : ''}
-        </Typography>
-        <Typography variant="caption" sx={counterSx}>
-          {sourceLength.toLocaleString()} / {inputLimit.toLocaleString()}
-        </Typography>
+        {overLimit && (
+          <Typography variant="caption" color="error.main">
+            {`原文が ${inputLimit.toLocaleString()} 文字を ${(
+              sourceLength - inputLimit
+            ).toLocaleString()} 文字超過しています`}
+          </Typography>
+        )}
+        {showCounter && (
+          <Typography variant="caption" sx={{ ml: 'auto', ...counterSx }}>
+            {sourceLength.toLocaleString()} / {inputLimit.toLocaleString()}
+          </Typography>
+        )}
       </Stack>
     </Paper>
   )
