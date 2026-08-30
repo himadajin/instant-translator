@@ -1,4 +1,4 @@
-import { CHAT_COMPLETIONS_URL, HEALTH_URL, SAMPLING } from './constants'
+import type { Profile } from './profiles'
 import type { ChatMessage, ConnectionStatus } from './types'
 
 export class ConnectionError extends Error {
@@ -7,6 +7,15 @@ export class ConnectionError extends Error {
   constructor(message = 'connection failed') {
     super(message)
     this.name = 'ConnectionError'
+  }
+}
+
+export class AuthError extends Error {
+  readonly kind = 'auth' as const
+
+  constructor(message = 'authentication failed') {
+    super(message)
+    this.name = 'AuthError'
   }
 }
 
@@ -20,30 +29,40 @@ export class TranslationError extends Error {
 }
 
 export type Inference = {
-  checkHealth(signal?: AbortSignal): Promise<ConnectionStatus>
+  checkHealth(profile: Profile, signal?: AbortSignal): Promise<ConnectionStatus>
   translate(
+    profile: Profile,
     messages: ChatMessage[],
     signal: AbortSignal,
   ): AsyncGenerator<string>
 }
 
+function headersFor(profile: Profile, withBody: boolean): HeadersInit {
+  return {
+    ...(withBody ? { 'Content-Type': 'application/json' } : {}),
+    ...(profile.apiKey !== ''
+      ? { Authorization: `Bearer ${profile.apiKey}` }
+      : {}),
+  }
+}
+
+function isAuthStatus(status: number): boolean {
+  return status === 401 || status === 403
+}
+
 export function createInference(fetchFn: typeof fetch = fetch): Inference {
   return {
-    async checkHealth(signal) {
+    async checkHealth(profile, signal) {
       try {
-        const response = await fetchFn(HEALTH_URL, { method: 'GET', signal })
-        if (!response.ok) {
-          return 'unavailable'
-        }
-        const body: unknown = await response.json()
-        if (
-          typeof body === 'object' &&
-          body !== null &&
-          (body as { status?: unknown }).status === 'ok'
-        ) {
+        const response = await fetchFn(`${profile.baseUrl}/models`, {
+          method: 'GET',
+          headers: headersFor(profile, false),
+          signal,
+        })
+        if (response.ok) {
           return 'ready'
         }
-        return 'unavailable'
+        return isAuthStatus(response.status) ? 'auth-failed' : 'unavailable'
       } catch (error) {
         if (isAbortError(error)) {
           throw error
@@ -52,19 +71,17 @@ export function createInference(fetchFn: typeof fetch = fetch): Inference {
       }
     },
 
-    async *translate(messages, signal) {
+    async *translate(profile, messages, signal) {
       let response: Response
       try {
-        response = await fetchFn(CHAT_COMPLETIONS_URL, {
+        response = await fetchFn(`${profile.baseUrl}/chat/completions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headersFor(profile, true),
           body: JSON.stringify({
+            ...profile.parameters,
             messages,
             stream: true,
-            temperature: SAMPLING.temperature,
-            top_p: SAMPLING.top_p,
-            top_k: SAMPLING.top_k,
-            repeat_penalty: SAMPLING.repeat_penalty,
+            ...(profile.model !== '' ? { model: profile.model } : {}),
           }),
           signal,
         })
@@ -77,6 +94,9 @@ export function createInference(fetchFn: typeof fetch = fetch): Inference {
         )
       }
 
+      if (isAuthStatus(response.status)) {
+        throw new AuthError(`HTTP ${response.status}`)
+      }
       if (!response.ok) {
         throw new TranslationError(`HTTP ${response.status}`)
       }

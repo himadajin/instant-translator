@@ -34,7 +34,8 @@ const STATUS_ANNOUNCEMENT: Partial<Record<TranslationStatus, string>> = {
   pending: '翻訳を開始しました',
   streaming: '翻訳を開始しました',
   done: '翻訳が完了しました',
-  connectionError: 'ローカル翻訳に接続できません',
+  connectionError: '推論先に接続できません',
+  authError: 'API キーが認証されませんでした',
   translationError: '翻訳を完了できませんでした',
   overLimit: '原文が上限を超えています',
 }
@@ -266,7 +267,13 @@ function renderBody({
     case 'connectionError':
       return (
         <Alert severity="error" action={retryAction}>
-          ローカル翻訳に接続できません
+          推論先に接続できません
+        </Alert>
+      )
+    case 'authError':
+      return (
+        <Alert severity="error" action={retryAction}>
+          API キーが認証されませんでした。プロファイル設定を確認してください
         </Alert>
       )
     case 'translationError':

@@ -1,3 +1,5 @@
+import type { Profile } from './profiles'
+
 export type TranslationDirection = 'ja-to-en' | 'en-to-ja'
 
 export type Language = 'japanese' | 'english'
@@ -13,9 +15,11 @@ export type TranslationStatus =
   | 'complete'
   | 'language-conflict'
   | 'connection-failed'
+  | 'auth-failed'
   | 'translation-failed'
 
-export type ConnectionStatus = 'checking' | 'ready' | 'unavailable'
+export type ConnectionStatus =
+  'checking' | 'ready' | 'unavailable' | 'auth-failed'
 
 export type DetectedLanguage = 'japanese' | 'english' | 'ambiguous'
 
@@ -57,6 +61,11 @@ export type WorkspaceSnapshot = {
   connectionStatus: ConnectionStatus
   sourceLength: number
   overLimit: boolean
+}
+
+export type SessionSnapshot = WorkspaceSnapshot & {
+  profiles: readonly Profile[]
+  selectedProfileId: string
 }
 
 export type KeyValueStorage = {

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createSession } from './translation'
-import type { Session, WorkspaceSnapshot } from './translation'
+import type { Session, SessionSnapshot } from './translation'
 import { INPUT_LIMIT, INPUT_WARN_AT } from './translation'
 import { Workspace } from './ui'
 import type { TranslationStatus as UiTranslationStatus } from './ui'
 
-const INITIAL_SNAPSHOT: WorkspaceSnapshot = {
+const INITIAL_SNAPSHOT: SessionSnapshot = {
   source: '',
   translation: '',
   translationIsCurrent: true,
@@ -18,11 +18,11 @@ const INITIAL_SNAPSHOT: WorkspaceSnapshot = {
   connectionStatus: 'checking',
   sourceLength: 0,
   overLimit: false,
+  profiles: [],
+  selectedProfileId: '',
 }
 
-function mapTranslationStatus(
-  snapshot: WorkspaceSnapshot,
-): UiTranslationStatus {
+function mapTranslationStatus(snapshot: SessionSnapshot): UiTranslationStatus {
   if (snapshot.overLimit) {
     return 'overLimit'
   }
@@ -41,12 +41,14 @@ function mapTranslationStatus(
       return 'languageConflict'
     case 'connection-failed':
       return 'connectionError'
+    case 'auth-failed':
+      return 'authError'
     case 'translation-failed':
       return 'translationError'
   }
 }
 
-function toWorkspaceView(snapshot: WorkspaceSnapshot) {
+function toWorkspaceView(snapshot: SessionSnapshot) {
   const translationStatus = mapTranslationStatus(snapshot)
   const translatedText = snapshot.translationIsCurrent
     ? snapshot.translation
@@ -57,6 +59,8 @@ function toWorkspaceView(snapshot: WorkspaceSnapshot) {
 
   return {
     connectionStatus: snapshot.connectionStatus,
+    profiles: snapshot.profiles,
+    selectedProfileId: snapshot.selectedProfileId,
     sourceText: snapshot.source,
     sourceLength: snapshot.sourceLength,
     overLimit: snapshot.overLimit,
@@ -75,7 +79,7 @@ function toWorkspaceView(snapshot: WorkspaceSnapshot) {
 
 export default function App() {
   const sessionRef = useRef<Session | null>(null)
-  const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>(INITIAL_SNAPSHOT)
+  const [snapshot, setSnapshot] = useState<SessionSnapshot>(INITIAL_SNAPSHOT)
 
   useEffect(() => {
     const session = createSession()
@@ -94,6 +98,12 @@ export default function App() {
   return (
     <Workspace
       {...view}
+      onProfileSelect={(id) => sessionRef.current?.selectProfile(id)}
+      onProfileAdd={(draft) => sessionRef.current?.addProfile(draft)}
+      onProfileUpdate={(id, draft) =>
+        sessionRef.current?.updateProfile(id, draft)
+      }
+      onProfileDelete={(id) => sessionRef.current?.deleteProfile(id)}
       onSourceTextChange={(text) => sessionRef.current?.setSource(text)}
       onClear={() => sessionRef.current?.clear()}
       onSourceLanguageChange={(language) =>

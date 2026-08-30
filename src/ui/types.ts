@@ -9,13 +9,23 @@
 import type {
   DetectedLanguage,
   Language,
+  Profile,
+  ProfileDraft,
   SourceLanguage,
   Tone,
 } from '../translation'
 
-export type { DetectedLanguage, Language, SourceLanguage, Tone }
+export type {
+  DetectedLanguage,
+  Language,
+  Profile,
+  ProfileDraft,
+  SourceLanguage,
+  Tone,
+}
 
-export type ConnectionStatus = 'ready' | 'checking' | 'unavailable'
+export type ConnectionStatus =
+  'ready' | 'checking' | 'unavailable' | 'auth-failed'
 
 /**
  * The translation pane's display state. `idle` covers both "no source text
@@ -29,6 +39,7 @@ export type TranslationStatus =
   | 'done'
   | 'languageConflict'
   | 'connectionError'
+  | 'authError'
   | 'translationError'
   | 'overLimit'
 
@@ -40,8 +51,18 @@ export const TONE_OPTIONS: readonly { value: Tone; label: string }[] = [
 ]
 
 export interface WorkspaceProps {
-  /** Current connection state to the local inference server. */
+  /** Current connection state to the selected profile's inference target. */
   connectionStatus: ConnectionStatus
+
+  /** Registered profiles, in registration order. Never empty once loaded. */
+  profiles: readonly Profile[]
+  /** Id of the profile used for translation. */
+  selectedProfileId: string
+  onProfileSelect: (id: string) => void
+  onProfileAdd: (draft: ProfileDraft) => void
+  onProfileUpdate: (id: string, draft: ProfileDraft) => void
+  /** Only invoked while two or more profiles exist. */
+  onProfileDelete: (id: string) => void
 
   /** The text the user is translating. Controlled by the caller. */
   sourceText: string

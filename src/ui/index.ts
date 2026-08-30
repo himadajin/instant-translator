@@ -3,6 +3,8 @@ export type {
   ConnectionStatus,
   DetectedLanguage,
   Language,
+  Profile,
+  ProfileDraft,
   SourceLanguage,
   Tone,
   TranslationStatus,
