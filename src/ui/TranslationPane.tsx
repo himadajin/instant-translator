@@ -125,8 +125,9 @@ export function TranslationPane({
           alignItems: 'center',
           flexWrap: 'wrap',
           px: 2,
-          pt: 2,
-          pb: 1,
+          py: 1,
+          borderBottom: 1,
+          borderColor: 'divider',
         }}
       >
         <Typography variant="overline" color="text.secondary">
@@ -188,7 +189,9 @@ export function TranslationPane({
         </Button>
       </Stack>
 
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pb: 2 }}>
+      <Box
+        sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pt: 1.5, pb: 2 }}
+      >
         {renderBody({
           translationStatus,
           translatedText,

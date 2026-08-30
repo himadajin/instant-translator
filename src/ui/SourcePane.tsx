@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
 import InputBase from '@mui/material/InputBase'
@@ -37,6 +38,12 @@ export function SourcePane({
   onClear: () => void
 }) {
   const [isInputFocused, setIsInputFocused] = useState(false)
+  const detectedLabel =
+    sourceLanguage === 'auto' &&
+    detectedLanguage !== 'ambiguous' &&
+    sourceLength > 0
+      ? LANGUAGE_NAMES[detectedLanguage]
+      : ''
   const counterSx = overLimit
     ? { color: 'error.main' }
     : sourceLength > inputWarnAt
@@ -53,11 +60,25 @@ export function SourcePane({
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
-        p: 2,
+        overflow: 'hidden',
         borderColor: isInputFocused ? 'primary.main' : undefined,
       }}
     >
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      {/* Mirrors the translation pane's 4px progress band so both pane
+          headers and bodies start at the same height. */}
+      <Box sx={{ height: 4, flexShrink: 0 }} />
+
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+          px: 2,
+          py: 1,
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
         <Typography variant="overline" color="text.secondary">
           原文
         </Typography>
@@ -65,6 +86,14 @@ export function SourcePane({
           <Select
             value={sourceLanguage}
             inputProps={{ 'aria-label': '原文の言語' }}
+            renderValue={(value) => {
+              const label = SOURCE_LANGUAGE_OPTIONS.find(
+                (option) => option.value === value,
+              )!.label
+              return value === 'auto' && detectedLabel
+                ? `${label} (${detectedLabel})`
+                : label
+            }}
             onChange={(event) =>
               onSourceLanguageChange(event.target.value as SourceLanguage)
             }
@@ -90,18 +119,6 @@ export function SourcePane({
         </Button>
       </Stack>
 
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ minHeight: 44, display: 'flex', alignItems: 'center', ml: 6 }}
-      >
-        {sourceLanguage === 'auto' &&
-        detectedLanguage !== 'ambiguous' &&
-        sourceLength > 0
-          ? `${LANGUAGE_NAMES[detectedLanguage]} を検出`
-          : ''}
-      </Typography>
-
       <InputBase
         fullWidth
         multiline
@@ -116,6 +133,8 @@ export function SourcePane({
           flex: 1,
           alignItems: 'flex-start',
           overflowY: 'auto',
+          px: 2,
+          pt: 1.5,
           ...BODY_TEXT_SX,
           '& .MuiInputBase-input': BODY_TEXT_SX,
         }}
@@ -124,7 +143,12 @@ export function SourcePane({
       <Stack
         direction="row"
         spacing={2}
-        sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}
+        sx={{
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          px: 2,
+          pb: 1.5,
+        }}
       >
         <Typography variant="caption" color="error.main">
           {overLimit
