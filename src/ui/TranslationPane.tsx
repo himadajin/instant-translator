@@ -119,11 +119,14 @@ export function TranslationPane({
 
       <Stack
         direction="row"
+        useFlexGap
         spacing={1}
         sx={{
           alignItems: 'center',
+          flexWrap: 'wrap',
           px: 2,
           pt: 2,
+          pb: 1,
         }}
       >
         <Typography variant="overline" color="text.secondary">
@@ -148,29 +151,6 @@ export function TranslationPane({
             ))}
           </Select>
         </FormControl>
-        <Button
-          size="small"
-          startIcon={<ContentCopyIcon fontSize="small" />}
-          onClick={handleCopy}
-          disabled={translationStatus !== 'done'}
-          sx={{ ml: 'auto' }}
-        >
-          {isCopied ? 'コピーしました' : 'コピー'}
-        </Button>
-      </Stack>
-
-      <Stack
-        direction="row"
-        useFlexGap
-        spacing={2}
-        sx={{
-          minHeight: 44,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          px: 2,
-          py: 0.5,
-        }}
-      >
         <FormControlLabel
           control={
             <Checkbox
@@ -197,6 +177,15 @@ export function TranslationPane({
             ))}
           </Select>
         </FormControl>
+        <Button
+          size="small"
+          startIcon={<ContentCopyIcon fontSize="small" />}
+          onClick={handleCopy}
+          disabled={translationStatus !== 'done'}
+          sx={{ ml: 'auto' }}
+        >
+          {isCopied ? 'コピーしました' : 'コピー'}
+        </Button>
       </Stack>
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pb: 2 }}>
@@ -242,17 +231,24 @@ function renderBody({
       再試行
     </Button>
   )
+  // Matches the source pane's input placeholder: a background hint,
+  // not selectable text and not announced to assistive technology.
+  const placeholder = (
+    <Typography aria-hidden sx={{ color: 'text.disabled', userSelect: 'none' }}>
+      ここに翻訳結果が表示されます
+    </Typography>
+  )
 
   switch (translationStatus) {
     case 'idle':
-      return <Typography color="text.secondary">翻訳結果</Typography>
+      return placeholder
     case 'pending':
       return previousTranslatedText ? (
         <Typography sx={{ ...BODY_TEXT_SX, color: 'text.disabled' }}>
           {previousTranslatedText}
         </Typography>
       ) : (
-        <Typography color="text.secondary">翻訳結果</Typography>
+        placeholder
       )
     case 'streaming':
     case 'done':

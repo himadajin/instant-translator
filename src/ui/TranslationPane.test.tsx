@@ -89,8 +89,12 @@ describe('TranslationPane', () => {
   })
 
   it.each([
-    ['idle', 'idle', '翻訳結果'],
-    ['pending without a previous result', 'pending', '翻訳結果'],
+    ['idle', 'idle', 'ここに翻訳結果が表示されます'],
+    [
+      'pending without a previous result',
+      'pending',
+      'ここに翻訳結果が表示されます',
+    ],
   ] as const)(
     '%s shows its placeholder and keeps copy disabled',
     (_label, status, text) => {
