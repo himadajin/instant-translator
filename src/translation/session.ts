@@ -1,5 +1,4 @@
 import { DEBOUNCE_MS, INPUT_LIMIT } from './constants'
-import { detectLanguage } from './detection'
 import {
   AuthError,
   ConnectionError,
@@ -23,7 +22,6 @@ import type {
   SessionSnapshot,
   SourceLanguage,
   Tone,
-  TranslationDirection,
   WorkState,
   WorkspaceState,
 } from './types'
@@ -118,16 +116,6 @@ export function createSession(deps: SessionDeps = {}): Session {
       return
     }
 
-    const resolution = resolveDirection(state)
-    if (resolution.direction === null) {
-      workspace.write({
-        translationStatus: 'language-conflict',
-        translationIsCurrent: false,
-      })
-      emit()
-      return
-    }
-
     workspace.write({
       translationStatus: 'waiting',
       translationIsCurrent: false,
@@ -158,16 +146,6 @@ export function createSession(deps: SessionDeps = {}): Session {
 
     invalidateHealthCheck()
 
-    const resolution = resolveDirection(state)
-    if (resolution.direction === null) {
-      workspace.write({
-        translationStatus: 'language-conflict',
-        translationIsCurrent: false,
-      })
-      emit()
-      return
-    }
-    const direction = resolution.direction
     workspace.write({
       translationStatus: 'translating',
       translationIsCurrent: false,
@@ -181,7 +159,8 @@ export function createSession(deps: SessionDeps = {}): Session {
     const current = workspace.read()
     const messages = buildMessages({
       source: current.source,
-      direction,
+      sourceLanguage: current.sourceLanguage,
+      targetLanguage: current.targetLanguage,
       idiomatic: current.idiomatic,
       tone: current.tone,
     })
@@ -230,7 +209,8 @@ export function createSession(deps: SessionDeps = {}): Session {
         translationStatus: 'complete',
         completedTranslation: completed.translation,
         completedSource: completed.source,
-        completedDirection: direction,
+        completedSourceLanguage: completed.sourceLanguage,
+        completedTargetLanguage: completed.targetLanguage,
         completedIdiomatic: completed.idiomatic,
         completedTone: completed.tone,
         connectionStatus: 'ready',
@@ -271,7 +251,8 @@ export function createSession(deps: SessionDeps = {}): Session {
         translation: '',
         completedTranslation: '',
         completedSource: '',
-        completedDirection: null,
+        completedSourceLanguage: null,
+        completedTargetLanguage: null,
         completedIdiomatic: null,
         completedTone: null,
         translationIsCurrent: true,
@@ -303,7 +284,7 @@ export function createSession(deps: SessionDeps = {}): Session {
 
   function setSourceLanguage(language: SourceLanguage): void {
     const state = workspace.read()
-    if (language !== 'auto' && language === state.targetLanguage) {
+    if (language !== 'unspecified' && language === state.targetLanguage) {
       return
     }
     workspace.write({ sourceLanguage: language })
@@ -314,7 +295,10 @@ export function createSession(deps: SessionDeps = {}): Session {
 
   function setTargetLanguage(language: Language): void {
     const state = workspace.read()
-    if (state.sourceLanguage !== 'auto' && state.sourceLanguage === language) {
+    if (
+      state.sourceLanguage !== 'unspecified' &&
+      state.sourceLanguage === language
+    ) {
       return
     }
     workspace.write({ targetLanguage: language })
@@ -413,7 +397,8 @@ export function createSession(deps: SessionDeps = {}): Session {
       translation: '',
       completedTranslation: '',
       completedSource: '',
-      completedDirection: null,
+      completedSourceLanguage: null,
+      completedTargetLanguage: null,
       completedIdiomatic: null,
       completedTone: null,
       translationIsCurrent: true,
@@ -529,14 +514,12 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
     return {}
   }
 
-  const resolution = resolveDirection(loaded)
-  const direction = resolution.direction
   const hasCompletedTranslation = loaded.completedTranslation !== ''
   const hasMatchingProvenance =
     hasCompletedTranslation &&
     loaded.completedSource === loaded.source &&
-    direction !== null &&
-    loaded.completedDirection === direction &&
+    loaded.completedSourceLanguage === loaded.sourceLanguage &&
+    loaded.completedTargetLanguage === loaded.targetLanguage &&
     loaded.completedIdiomatic === loaded.idiomatic &&
     loaded.completedTone === loaded.tone
 
@@ -563,11 +546,7 @@ function restoredState(loaded: WorkState | null): Partial<WorkspaceState> {
     translation: loaded.completedTranslation,
     translationIsCurrent: false,
     translationStatus:
-      countGraphemes(loaded.source) > INPUT_LIMIT
-        ? 'idle'
-        : direction === null
-          ? 'language-conflict'
-          : 'waiting',
+      countGraphemes(loaded.source) > INPUT_LIMIT ? 'idle' : 'waiting',
   }
 }
 
@@ -576,39 +555,13 @@ function workStateFrom(state: WorkspaceState): WorkState {
     source: state.source,
     completedTranslation: state.completedTranslation,
     completedSource: state.completedSource,
-    completedDirection: state.completedDirection,
+    completedSourceLanguage: state.completedSourceLanguage,
+    completedTargetLanguage: state.completedTargetLanguage,
     completedIdiomatic: state.completedIdiomatic,
     completedTone: state.completedTone,
     sourceLanguage: state.sourceLanguage,
     targetLanguage: state.targetLanguage,
     idiomatic: state.idiomatic,
     tone: state.tone,
-  }
-}
-
-function resolveDirection(state: {
-  source: string
-  sourceLanguage: SourceLanguage
-  targetLanguage: Language
-}): { direction: TranslationDirection | null } {
-  const sourceLanguage =
-    state.sourceLanguage === 'auto'
-      ? detectLanguage(state.source)
-      : state.sourceLanguage
-
-  if (sourceLanguage === state.targetLanguage) {
-    return { direction: null }
-  }
-  if (sourceLanguage === 'japanese') {
-    return { direction: 'ja-to-en' }
-  }
-  if (sourceLanguage === 'english') {
-    return { direction: 'en-to-ja' }
-  }
-
-  // With the currently supported pair, an ambiguous automatic detection can
-  // safely fall back to the only source language different from the target.
-  return {
-    direction: state.targetLanguage === 'english' ? 'ja-to-en' : 'en-to-ja',
   }
 }

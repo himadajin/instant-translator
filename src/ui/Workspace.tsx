@@ -31,7 +31,6 @@ export function Workspace({
   onClear,
   sourceLanguage,
   targetLanguage,
-  detectedLanguage,
   onSourceLanguageChange,
   onTargetLanguageChange,
   idiomatic,
@@ -79,7 +78,6 @@ export function Workspace({
             inputWarnAt={inputWarnAt}
             sourceLanguage={sourceLanguage}
             targetLanguage={targetLanguage}
-            detectedLanguage={detectedLanguage}
             onSourceLanguageChange={onSourceLanguageChange}
             onSourceTextChange={onSourceTextChange}
             onClear={onClear}
@@ -91,7 +89,6 @@ export function Workspace({
             inputLimit={inputLimit}
             sourceLanguage={sourceLanguage}
             targetLanguage={targetLanguage}
-            detectedLanguage={detectedLanguage}
             onTargetLanguageChange={onTargetLanguageChange}
             idiomatic={idiomatic}
             onIdiomaticChange={onIdiomaticChange}

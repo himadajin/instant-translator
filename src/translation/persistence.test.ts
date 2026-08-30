@@ -23,10 +23,11 @@ const sample: WorkState = {
   source: 'こんにちは',
   completedTranslation: 'Hello',
   completedSource: 'こんにちは',
-  completedDirection: 'ja-to-en',
+  completedSourceLanguage: 'unspecified',
+  completedTargetLanguage: 'english',
   completedIdiomatic: false,
   completedTone: 'chat',
-  sourceLanguage: 'auto',
+  sourceLanguage: 'unspecified',
   targetLanguage: 'english',
   idiomatic: false,
   tone: 'chat',
@@ -67,6 +68,16 @@ describe('Persistence', () => {
     expect(persistence.load()).toBeNull()
   })
 
+  it("rejects the removed 'auto' source-language value", () => {
+    const storage = memoryStorage()
+    const persistence = createPersistence(storage)
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...sample, sourceLanguage: 'auto' }),
+    )
+    expect(persistence.load()).toBeNull()
+  })
+
   it('accepts an empty completed-result record', () => {
     const storage = memoryStorage()
     const persistence = createPersistence(storage)
@@ -74,10 +85,11 @@ describe('Persistence', () => {
       source: 'こんにちは',
       completedTranslation: '',
       completedSource: '',
-      completedDirection: null,
+      completedSourceLanguage: null,
+      completedTargetLanguage: null,
       completedIdiomatic: null,
       completedTone: null,
-      sourceLanguage: 'auto',
+      sourceLanguage: 'unspecified',
       targetLanguage: 'english',
       idiomatic: false,
       tone: 'standard',

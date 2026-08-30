@@ -25,12 +25,10 @@ export type {
 } from './profiles'
 export type {
   ConnectionStatus,
-  DetectedLanguage,
   Language,
   SessionSnapshot,
   SourceLanguage,
   Tone,
-  TranslationDirection,
   TranslationStatus,
   WorkspaceSnapshot,
 } from './types'

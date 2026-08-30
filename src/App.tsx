@@ -9,9 +9,8 @@ const INITIAL_SNAPSHOT: SessionSnapshot = {
   source: '',
   translation: '',
   translationIsCurrent: true,
-  sourceLanguage: 'auto',
+  sourceLanguage: 'unspecified',
   targetLanguage: 'english',
-  detectedLanguage: 'ambiguous',
   idiomatic: false,
   tone: 'standard',
   translationStatus: 'idle',
@@ -37,8 +36,6 @@ function mapTranslationStatus(snapshot: SessionSnapshot): UiTranslationStatus {
       return snapshot.translationIsCurrent ? 'streaming' : 'pending'
     case 'complete':
       return 'done'
-    case 'language-conflict':
-      return 'languageConflict'
     case 'connection-failed':
       return 'connectionError'
     case 'auth-failed':
@@ -68,7 +65,6 @@ function toWorkspaceView(snapshot: SessionSnapshot) {
     inputWarnAt: INPUT_WARN_AT,
     sourceLanguage: snapshot.sourceLanguage,
     targetLanguage: snapshot.targetLanguage,
-    detectedLanguage: snapshot.detectedLanguage,
     idiomatic: snapshot.idiomatic,
     tone: snapshot.tone,
     translationStatus,

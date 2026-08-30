@@ -14,10 +14,9 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { visuallyHidden } from '@mui/utils'
-import { LANGUAGE_NAMES, TARGET_LANGUAGE_OPTIONS } from './languages'
+import { TARGET_LANGUAGE_OPTIONS } from './languages'
 import { TONE_OPTIONS } from './types'
 import type {
-  DetectedLanguage,
   Language,
   SourceLanguage,
   Tone,
@@ -47,7 +46,6 @@ export function TranslationPane({
   inputLimit,
   sourceLanguage,
   targetLanguage,
-  detectedLanguage,
   onTargetLanguageChange,
   idiomatic,
   onIdiomaticChange,
@@ -62,7 +60,6 @@ export function TranslationPane({
   inputLimit: number
   sourceLanguage: SourceLanguage
   targetLanguage: Language
-  detectedLanguage: DetectedLanguage
   onTargetLanguageChange: (language: Language) => void
   idiomatic: boolean
   onIdiomaticChange: (idiomatic: boolean) => void
@@ -82,10 +79,6 @@ export function TranslationPane({
 
   const isTranslating =
     translationStatus === 'pending' || translationStatus === 'streaming'
-  const conflictMessage =
-    translationStatus === 'languageConflict' && detectedLanguage !== 'ambiguous'
-      ? `原文は${LANGUAGE_NAMES[detectedLanguage]}として検出されました。別の訳文言語を選択してください。`
-      : ''
 
   const handleCopy = async () => {
     try {
@@ -198,7 +191,6 @@ export function TranslationPane({
           translatedText,
           previousTranslatedText,
           inputLimit,
-          conflictMessage,
           onRetry,
         })}
       </Box>
@@ -209,7 +201,7 @@ export function TranslationPane({
         aria-live="polite"
         sx={visuallyHidden}
       >
-        {conflictMessage || STATUS_ANNOUNCEMENT[translationStatus] || ''}
+        {STATUS_ANNOUNCEMENT[translationStatus] || ''}
       </Box>
     </Paper>
   )
@@ -220,14 +212,12 @@ function renderBody({
   translatedText,
   previousTranslatedText,
   inputLimit,
-  conflictMessage,
   onRetry,
 }: {
   translationStatus: TranslationStatus
   translatedText: string
   previousTranslatedText?: string
   inputLimit: number
-  conflictMessage: string
   onRetry: () => void
 }) {
   const retryAction = (
@@ -288,7 +278,5 @@ function renderBody({
           原文が {inputLimit.toLocaleString()} 文字を超えています
         </Typography>
       )
-    case 'languageConflict':
-      return <Alert severity="warning">{conflictMessage}</Alert>
   }
 }

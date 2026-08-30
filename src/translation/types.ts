@@ -1,10 +1,8 @@
 import type { Profile } from './profiles'
 
-export type TranslationDirection = 'ja-to-en' | 'en-to-ja'
-
 export type Language = 'japanese' | 'english'
 
-export type SourceLanguage = 'auto' | Language
+export type SourceLanguage = 'unspecified' | Language
 
 export type Tone = 'standard' | 'chat' | 'technical' | 'casual'
 
@@ -13,15 +11,12 @@ export type TranslationStatus =
   | 'waiting'
   | 'translating'
   | 'complete'
-  | 'language-conflict'
   | 'connection-failed'
   | 'auth-failed'
   | 'translation-failed'
 
 export type ConnectionStatus =
   'checking' | 'ready' | 'unavailable' | 'auth-failed'
-
-export type DetectedLanguage = 'japanese' | 'english' | 'ambiguous'
 
 export type ChatMessage = {
   role: 'user'
@@ -32,7 +27,8 @@ export type WorkState = {
   source: string
   completedTranslation: string
   completedSource: string
-  completedDirection: TranslationDirection | null
+  completedSourceLanguage: SourceLanguage | null
+  completedTargetLanguage: Language | null
   completedIdiomatic: boolean | null
   completedTone: Tone | null
   sourceLanguage: SourceLanguage
@@ -54,7 +50,6 @@ export type WorkspaceSnapshot = {
   translationIsCurrent: boolean
   sourceLanguage: SourceLanguage
   targetLanguage: Language
-  detectedLanguage: DetectedLanguage
   idiomatic: boolean
   tone: Tone
   translationStatus: TranslationStatus

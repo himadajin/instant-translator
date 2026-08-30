@@ -14,9 +14,8 @@ function renderTranslation(
     translationStatus: 'idle',
     translatedText: '',
     inputLimit: 4000,
-    sourceLanguage: 'auto',
+    sourceLanguage: 'unspecified',
     targetLanguage: 'english',
-    detectedLanguage: 'ambiguous',
     onTargetLanguageChange: vi.fn(),
     idiomatic: false,
     onIdiomaticChange: vi.fn(),
@@ -43,7 +42,6 @@ describe('TranslationPane', () => {
     const onIdiomaticChange = vi.fn()
     const onToneChange = vi.fn()
     renderTranslation({
-      detectedLanguage: 'japanese',
       onTargetLanguageChange,
       onIdiomaticChange,
       onToneChange,
@@ -71,21 +69,6 @@ describe('TranslationPane', () => {
         .getByRole('option', { name: '日本語' })
         .getAttribute('aria-disabled'),
     ).toBe('true')
-  })
-
-  it('explains an automatic language conflict without showing stale text', () => {
-    renderTranslation({
-      translationStatus: 'languageConflict',
-      translatedText: '古い訳文',
-      detectedLanguage: 'english',
-      targetLanguage: 'english',
-    })
-
-    const message =
-      '原文はEnglishとして検出されました。別の訳文言語を選択してください。'
-    expect(screen.getByRole('alert').textContent).toBe(message)
-    expect(screen.queryByText('古い訳文')).toBeNull()
-    expectAnnouncement(message)
   })
 
   it.each([
@@ -121,9 +104,8 @@ describe('TranslationPane', () => {
         translationStatus="done"
         translatedText="完成した訳文"
         inputLimit={4000}
-        sourceLanguage="auto"
+        sourceLanguage="unspecified"
         targetLanguage="english"
-        detectedLanguage="japanese"
         onTargetLanguageChange={vi.fn()}
         idiomatic={false}
         onIdiomaticChange={vi.fn()}
