@@ -51,12 +51,20 @@ describe('TranslationPane', () => {
     await user.click(screen.getByRole('option', { name: '日本語' }))
     expect(onTargetLanguageChange).toHaveBeenCalledWith('japanese')
 
-    await user.click(screen.getByRole('checkbox', { name: '意訳' }))
-    expect(onIdiomaticChange).toHaveBeenCalledWith(true)
-
     await user.click(screen.getByRole('combobox', { name: '口調' }))
-    await user.click(screen.getByRole('option', { name: '技術文書' }))
+    await user.click(screen.getByRole('option', { name: '技術文書の口調' }))
     expect(onToneChange).toHaveBeenCalledWith('technical')
+
+    await user.click(screen.getByRole('button', { name: '意訳' }))
+    expect(onIdiomaticChange).toHaveBeenCalledWith(true)
+  })
+
+  it('exposes the idiomatic toggle state to assistive technology', () => {
+    renderTranslation({ idiomatic: true })
+
+    expect(
+      screen.getByRole('button', { name: '意訳' }).getAttribute('aria-pressed'),
+    ).toBe('true')
   })
 
   it('disables the explicitly selected source language as a target', async () => {

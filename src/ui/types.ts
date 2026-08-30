@@ -34,11 +34,16 @@ export type TranslationStatus =
   | 'translationError'
   | 'overLimit'
 
+/**
+ * Tone choices as shown in the translation pane. The labels name the tone
+ * itself so the Select needs no floating label, matching the unlabelled
+ * language Selects on the same row.
+ */
 export const TONE_OPTIONS: readonly { value: Tone; label: string }[] = [
-  { value: 'standard', label: '標準' },
-  { value: 'chat', label: 'チャット' },
-  { value: 'technical', label: '技術文書' },
-  { value: 'casual', label: 'カジュアル' },
+  { value: 'standard', label: '標準の口調' },
+  { value: 'chat', label: 'チャットの口調' },
+  { value: 'technical', label: '技術文書の口調' },
+  { value: 'casual', label: 'カジュアルな口調' },
 ]
 
 export interface WorkspaceProps {

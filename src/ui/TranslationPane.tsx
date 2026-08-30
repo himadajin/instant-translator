@@ -2,16 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Checkbox from '@mui/material/Checkbox'
+import Chip from '@mui/material/Chip'
 import FormControl from '@mui/material/FormControl'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import InputLabel from '@mui/material/InputLabel'
 import LinearProgress from '@mui/material/LinearProgress'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import CheckIcon from '@mui/icons-material/Check'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { visuallyHidden } from '@mui/utils'
 import { TARGET_LANGUAGE_OPTIONS } from './languages'
@@ -146,23 +145,10 @@ export function TranslationPane({
             ))}
           </Select>
         </FormControl>
-        <FormControlLabel
-          control={
-            <Checkbox
-              size="small"
-              checked={idiomatic}
-              onChange={(event) => onIdiomaticChange(event.target.checked)}
-            />
-          }
-          label="意訳"
-          sx={{ m: 0 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel id="tone-select-label">口調</InputLabel>
+        <FormControl size="small" sx={{ minWidth: 160 }}>
           <Select
-            labelId="tone-select-label"
-            label="口調"
             value={tone}
+            inputProps={{ 'aria-label': '口調' }}
             onChange={(event) => onToneChange(event.target.value as Tone)}
           >
             {TONE_OPTIONS.map((option) => (
@@ -172,6 +158,18 @@ export function TranslationPane({
             ))}
           </Select>
         </FormControl>
+        {/* Filled with a check mark when on, outlined and unadorned when off,
+            so the state does not rest on color alone. */}
+        <Chip
+          label="意訳"
+          size="small"
+          clickable
+          aria-pressed={idiomatic}
+          color={idiomatic ? 'primary' : 'default'}
+          variant={idiomatic ? 'filled' : 'outlined'}
+          icon={idiomatic ? <CheckIcon fontSize="small" /> : undefined}
+          onClick={() => onIdiomaticChange(!idiomatic)}
+        />
         <Button
           size="small"
           startIcon={<ContentCopyIcon fontSize="small" />}
