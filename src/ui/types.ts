@@ -73,6 +73,10 @@ export interface WorkspaceProps {
   onSourceTextChange: (text: string) => void
   /** Clears the source text. Only invoked while `sourceText` is non-empty. */
   onClear: () => void
+  /** Whether a cleared source is kept and the current source is still empty. */
+  canRestoreCleared: boolean
+  /** Restores the cleared source. Only invoked while `canRestoreCleared`. */
+  onRestoreCleared: () => void
 
   sourceLanguage: SourceLanguage
   targetLanguage: Language

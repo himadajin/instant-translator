@@ -29,6 +29,8 @@ export function Workspace({
   inputWarnAt,
   onSourceTextChange,
   onClear,
+  canRestoreCleared,
+  onRestoreCleared,
   sourceLanguage,
   targetLanguage,
   onSourceLanguageChange,
@@ -81,6 +83,8 @@ export function Workspace({
             onSourceLanguageChange={onSourceLanguageChange}
             onSourceTextChange={onSourceTextChange}
             onClear={onClear}
+            canRestoreCleared={canRestoreCleared}
+            onRestoreCleared={onRestoreCleared}
           />
           <TranslationPane
             translationStatus={translationStatus}

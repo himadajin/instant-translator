@@ -46,6 +46,7 @@ export type Session = {
   updateProfile(id: string, draft: ProfileDraft): void
   deleteProfile(id: string): void
   clear(): void
+  restoreCleared(): void
   retry(): void
   checkConnection(): Promise<void>
   dispose(): void
@@ -60,6 +61,9 @@ export function createSession(deps: SessionDeps = {}): Session {
   let profileState = loadedProfiles ?? createDefaultProfileState()
 
   const listeners = new Set<(snapshot: SessionSnapshot) => void>()
+  // The source kept by the last clear, so it can be restored. A single entry:
+  // the next clear overwrites it. Not part of the persisted work state.
+  let clearedSource = ''
   let cachedSnapshot = snapshotFrom()
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestId = 0
@@ -69,10 +73,12 @@ export function createSession(deps: SessionDeps = {}): Session {
   let disposed = false
 
   function snapshotFrom(): SessionSnapshot {
+    const state = workspace.read()
     return {
-      ...toSnapshot(workspace.read()),
+      ...toSnapshot(state),
       profiles: profileState.profiles,
       selectedProfileId: profileState.selectedId,
+      canRestoreCleared: clearedSource !== '' && state.source === '',
     }
   }
 
@@ -387,6 +393,10 @@ export function createSession(deps: SessionDeps = {}): Session {
   }
 
   function clear(): void {
+    const previousSource = workspace.read().source
+    if (previousSource !== '') {
+      clearedSource = previousSource
+    }
     if (debounceTimer !== undefined) {
       clearTimeout(debounceTimer)
       debounceTimer = undefined
@@ -406,6 +416,15 @@ export function createSession(deps: SessionDeps = {}): Session {
     })
     persist()
     emit()
+  }
+
+  // Restores the kept source through the same path as a normal edit, so the
+  // automatic translation starts again.
+  function restoreCleared(): void {
+    if (clearedSource === '' || workspace.read().source !== '') {
+      return
+    }
+    setSource(clearedSource)
   }
 
   function retry(): void {
@@ -492,6 +511,7 @@ export function createSession(deps: SessionDeps = {}): Session {
     updateProfile,
     deleteProfile,
     clear,
+    restoreCleared,
     retry,
     checkConnection,
     dispose,

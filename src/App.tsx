@@ -19,6 +19,7 @@ const INITIAL_SNAPSHOT: SessionSnapshot = {
   overLimit: false,
   profiles: [],
   selectedProfileId: '',
+  canRestoreCleared: false,
 }
 
 function mapTranslationStatus(snapshot: SessionSnapshot): UiTranslationStatus {
@@ -70,6 +71,7 @@ function toWorkspaceView(snapshot: SessionSnapshot) {
     translationStatus,
     translatedText,
     previousTranslatedText,
+    canRestoreCleared: snapshot.canRestoreCleared,
   }
 }
 
@@ -102,6 +104,7 @@ export default function App() {
       onProfileDelete={(id) => sessionRef.current?.deleteProfile(id)}
       onSourceTextChange={(text) => sessionRef.current?.setSource(text)}
       onClear={() => sessionRef.current?.clear()}
+      onRestoreCleared={() => sessionRef.current?.restoreCleared()}
       onSourceLanguageChange={(language) =>
         sessionRef.current?.setSourceLanguage(language)
       }

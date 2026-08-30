@@ -239,9 +239,9 @@ describe('Session', () => {
     expect(session.getSnapshot().targetLanguage).toBe('english')
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
-    expect(
-      harness.completions.at(-1)?.body.messages[0]?.content,
-    ).not.toContain(' from ')
+    expect(harness.completions.at(-1)?.body.messages[0]?.content).not.toContain(
+      ' from ',
+    )
     session.dispose()
   })
 
@@ -482,7 +482,7 @@ describe('Session', () => {
     session.dispose()
   })
 
-  it('8. clear removes source, translation, and saved texts; restore loads completed work state only', async () => {
+  it('8. clear removes source, translation, and saved texts, and keeps the cleared source for one restore; restore loads completed work state only', async () => {
     const storage = memoryStorage()
     const harness = createFetchHarness()
     const session = createSession({ fetch: harness.fetchFn, storage })
@@ -521,9 +521,11 @@ describe('Session', () => {
     live.setSource(japaneseSource)
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
     await flush()
+    expect(live.getSnapshot().canRestoreCleared).toBe(false)
     live.clear()
     expect(live.getSnapshot().source).toBe('')
     expect(live.getSnapshot().translation).toBe('')
+    expect(live.getSnapshot().canRestoreCleared).toBe(true)
     const cleared = JSON.parse(
       storage.getItem(STORAGE_KEY) ?? '{}',
     ) as WorkState
@@ -531,6 +533,20 @@ describe('Session', () => {
     expect(cleared.completedTranslation).toBe('')
     expect(cleared.idiomatic).toBe(true)
     expect(cleared.tone).toBe('technical')
+
+    const before = harness.completions.length
+    live.restoreCleared()
+    expect(live.getSnapshot().source).toBe(japaneseSource)
+    expect(live.getSnapshot().canRestoreCleared).toBe(false)
+    expect(live.getSnapshot().translationStatus).toBe('waiting')
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    await flush()
+    expect(harness.completions).toHaveLength(before + 1)
+    expect(requestedSource(harness.completions.at(-1))).toBe(japaneseSource)
+
+    // A restore is ignored while the source is not empty.
+    live.restoreCleared()
+    expect(live.getSnapshot().source).toBe(japaneseSource)
     live.dispose()
   })
 

@@ -159,6 +159,19 @@ describe('TranslationPane', () => {
     )
   })
 
+  it('places the copy action in the pane bottom toolbar, after the translation', () => {
+    renderTranslation({
+      translationStatus: 'done',
+      translatedText: '完成した訳文',
+    })
+
+    const body = screen.getByText('完成した訳文')
+    const copy = screen.getByRole('button', { name: 'コピー' })
+    expect(
+      body.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
   it('copies a completed translation and gives immediate success feedback', async () => {
     const user = userEvent.setup()
     const onCopy = vi.fn(async () => {})

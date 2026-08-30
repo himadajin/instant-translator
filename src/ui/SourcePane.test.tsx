@@ -22,6 +22,8 @@ function renderSource(
     onSourceLanguageChange: vi.fn(),
     onSourceTextChange: vi.fn(),
     onClear: vi.fn(),
+    canRestoreCleared: false,
+    onRestoreCleared: vi.fn(),
     ...overrides,
   }
 
@@ -33,6 +35,7 @@ function ControlledSourcePane({
   onClear,
 }: Pick<Parameters<typeof SourcePane>[0], 'onSourceTextChange' | 'onClear'>) {
   const [sourceText, setSourceText] = useState('')
+  const [clearedSource, setClearedSource] = useState('')
 
   return (
     <SourcePane
@@ -50,8 +53,11 @@ function ControlledSourcePane({
       }}
       onClear={() => {
         onClear()
+        setClearedSource(sourceText)
         setSourceText('')
       }}
+      canRestoreCleared={clearedSource !== '' && sourceText === ''}
+      onRestoreCleared={() => setSourceText(clearedSource)}
     />
   )
 }
@@ -121,7 +127,7 @@ describe('SourcePane', () => {
     expect(screen.getByText('4,001 / 4,000')).toBeDefined()
   })
 
-  it('shows the clear action only for non-empty source and forwards user actions', async () => {
+  it('keeps the clear action in the toolbar and disables it while the source is empty', async () => {
     const user = userEvent.setup()
     const onSourceTextChange = vi.fn()
     const onClear = vi.fn()
@@ -133,13 +139,62 @@ describe('SourcePane', () => {
     )
     const source = screen.getByRole('textbox', { name: '原文' })
 
-    expect(screen.queryByRole('button', { name: '消去' })).toBeNull()
+    expect(screen.getByRole('button', { name: '消去' })).toHaveProperty(
+      'disabled',
+      true,
+    )
     await user.type(source, 'abc')
     expect(onSourceTextChange).toHaveBeenLastCalledWith('abc')
     expect(source).toHaveProperty('value', 'abc')
     await user.click(screen.getByRole('button', { name: '消去' }))
     expect(onClear).toHaveBeenCalledTimes(1)
     expect(source).toHaveProperty('value', '')
-    expect(screen.queryByRole('button', { name: '消去' })).toBeNull()
+    expect(screen.getByRole('button', { name: '消去' })).toHaveProperty(
+      'disabled',
+      true,
+    )
+  })
+
+  it('restores the cleared source through the undo action', async () => {
+    const user = userEvent.setup()
+    render(
+      <ControlledSourcePane onSourceTextChange={vi.fn()} onClear={vi.fn()} />,
+    )
+    const source = screen.getByRole('textbox', { name: '原文' })
+
+    expect(screen.getByRole('button', { name: '元に戻す' })).toHaveProperty(
+      'disabled',
+      true,
+    )
+    await user.type(source, 'abc')
+    expect(screen.getByRole('button', { name: '元に戻す' })).toHaveProperty(
+      'disabled',
+      true,
+    )
+    await user.click(screen.getByRole('button', { name: '消去' }))
+    await user.click(screen.getByRole('button', { name: '元に戻す' }))
+    expect(source).toHaveProperty('value', 'abc')
+    expect(screen.getByRole('button', { name: '元に戻す' })).toHaveProperty(
+      'disabled',
+      true,
+    )
+  })
+
+  it('disables the undo action while no cleared source is kept', () => {
+    renderSource({ sourceText: '', sourceLength: 0, canRestoreCleared: false })
+
+    expect(screen.getByRole('button', { name: '元に戻す' })).toHaveProperty(
+      'disabled',
+      true,
+    )
+  })
+
+  it('enables the undo action while a cleared source is kept', async () => {
+    const user = userEvent.setup()
+    const onRestoreCleared = vi.fn()
+    renderSource({ canRestoreCleared: true, onRestoreCleared })
+
+    await user.click(screen.getByRole('button', { name: '元に戻す' }))
+    expect(onRestoreCleared).toHaveBeenCalledTimes(1)
   })
 })
