@@ -237,7 +237,10 @@ function renderBody({
   // Matches the source pane's input placeholder: a background hint,
   // not selectable text and not announced to assistive technology.
   const placeholder = (
-    <Typography aria-hidden sx={{ color: 'text.disabled', userSelect: 'none' }}>
+    <Typography
+      aria-hidden
+      sx={{ ...BODY_TEXT_SX, color: 'text.disabled', userSelect: 'none' }}
+    >
       ここに翻訳結果が表示されます
     </Typography>
   )
