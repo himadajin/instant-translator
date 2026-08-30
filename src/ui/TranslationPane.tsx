@@ -170,15 +170,6 @@ export function TranslationPane({
           icon={idiomatic ? <CheckIcon fontSize="small" /> : undefined}
           onClick={() => onIdiomaticChange(!idiomatic)}
         />
-        <Button
-          size="small"
-          startIcon={<ContentCopyIcon fontSize="small" />}
-          onClick={handleCopy}
-          disabled={translationStatus !== 'done'}
-          sx={{ ml: 'auto' }}
-        >
-          {isCopied ? 'コピーしました' : 'コピー'}
-        </Button>
       </Stack>
 
       <Box
@@ -192,6 +183,30 @@ export function TranslationPane({
           onRetry,
         })}
       </Box>
+
+      {/* Same padding as the source pane's toolbar so both pane bottoms
+          keep the same height. */}
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          px: 2,
+          py: 0.5,
+          minHeight: 48,
+          borderTop: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Button
+          size="small"
+          startIcon={<ContentCopyIcon fontSize="small" />}
+          onClick={handleCopy}
+          disabled={translationStatus !== 'done'}
+        >
+          {isCopied ? 'コピーしました' : 'コピー'}
+        </Button>
+      </Stack>
 
       <Box
         component="span"

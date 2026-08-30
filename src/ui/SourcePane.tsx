@@ -10,6 +10,7 @@ import Stack from '@mui/material/Stack'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import ClearIcon from '@mui/icons-material/Clear'
+import UndoIcon from '@mui/icons-material/Undo'
 import { BODY_TEXT_SX } from './bodyText'
 import { SOURCE_LANGUAGE_OPTIONS } from './languages'
 import type { Language, SourceLanguage } from './types'
@@ -25,6 +26,8 @@ export function SourcePane({
   onSourceLanguageChange,
   onSourceTextChange,
   onClear,
+  canRestoreCleared,
+  onRestoreCleared,
 }: {
   sourceText: string
   sourceLength: number
@@ -36,6 +39,8 @@ export function SourcePane({
   onSourceLanguageChange: (language: SourceLanguage) => void
   onSourceTextChange: (text: string) => void
   onClear: () => void
+  canRestoreCleared: boolean
+  onRestoreCleared: () => void
 }) {
   const [isInputFocused, setIsInputFocused] = useState(false)
   const showCounter = sourceLength > inputWarnAt
@@ -94,20 +99,6 @@ export function SourcePane({
             ))}
           </Select>
         </FormControl>
-        {/* Hidden while the source is empty: the row height comes from the
-            language Select, so the button appearing does not move the body. */}
-        {sourceLength > 0 && (
-          <Tooltip title="消去">
-            <IconButton
-              size="small"
-              aria-label="消去"
-              onClick={onClear}
-              sx={{ ml: 'auto' }}
-            >
-              <ClearIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
       </Stack>
 
       <InputBase
@@ -126,25 +117,55 @@ export function SourcePane({
           overflowY: 'auto',
           px: 2,
           pt: 1.5,
+          pb: 1.5,
           ...BODY_TEXT_SX,
           '& .MuiInputBase-input': BODY_TEXT_SX,
         }}
       />
 
-      {/* The band keeps one caption line of height even while empty so the
-          counter appearing at the warning threshold does not move the body. */}
+      {/* The toolbar's height comes from the buttons, so the counter appearing
+          at the warning threshold does not move the input area. */}
       <Stack
         direction="row"
         spacing={2}
         sx={{
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
+          alignItems: 'center',
           px: 2,
-          pb: 1.5,
+          py: 0.5,
+          minHeight: 48,
+          borderTop: 1,
+          borderColor: 'divider',
           typography: 'caption',
-          minHeight: '1lh',
         }}
       >
+        {/* Always drawn and disabled when unavailable, so the toolbar keeps
+            the same shape whatever the source contains. */}
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title="元に戻す">
+            <span>
+              <IconButton
+                size="small"
+                aria-label="元に戻す"
+                disabled={!canRestoreCleared}
+                onClick={onRestoreCleared}
+              >
+                <UndoIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="消去">
+            <span>
+              <IconButton
+                size="small"
+                aria-label="消去"
+                disabled={sourceLength === 0}
+                onClick={onClear}
+              >
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
         {overLimit && (
           <Typography variant="caption" color="error.main">
             {`原文が ${inputLimit.toLocaleString()} 文字を ${(

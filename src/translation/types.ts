@@ -61,6 +61,8 @@ export type WorkspaceSnapshot = {
 export type SessionSnapshot = WorkspaceSnapshot & {
   profiles: readonly Profile[]
   selectedProfileId: string
+  /** Whether a cleared source is kept and the current source is still empty. */
+  canRestoreCleared: boolean
 }
 
 export type KeyValueStorage = {
