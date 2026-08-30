@@ -16,14 +16,9 @@ import { useColorScheme } from '@mui/material/styles'
 import { ProfileSettingsDialog } from './ProfileSettingsDialog'
 import type { ConnectionStatus, Profile, ProfileDraft } from './types'
 
-const STATUS_CHIP: Record<
-  ConnectionStatus,
-  { label: string; color: 'default' | 'error' }
-> = {
-  ready: { label: '接続済み', color: 'default' },
-  checking: { label: '確認中', color: 'default' },
-  unavailable: { label: '未接続', color: 'error' },
-  'auth-failed': { label: '認証エラー', color: 'error' },
+const STATUS_CHIP: Partial<Record<ConnectionStatus, string>> = {
+  unavailable: '未接続',
+  'auth-failed': '認証エラー',
 }
 
 function ColorModeToggle() {
@@ -60,7 +55,7 @@ export function Header({
   onProfileUpdate: (id: string, draft: ProfileDraft) => void
   onProfileDelete: (id: string) => void
 }) {
-  const status = STATUS_CHIP[connectionStatus]
+  const statusLabel = STATUS_CHIP[connectionStatus]
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
@@ -97,14 +92,16 @@ export function Header({
               >
                 <SettingsIcon />
               </IconButton>
-              <Chip
-                size="small"
-                variant="outlined"
-                color={status.color}
-                label={status.label}
-                role="status"
-                aria-live="polite"
-              />
+              {statusLabel && (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  label={statusLabel}
+                  role="status"
+                  aria-live="polite"
+                />
+              )}
             </Stack>
             <ColorModeToggle />
           </Stack>
