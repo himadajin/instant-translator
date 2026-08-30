@@ -67,7 +67,9 @@ describe('SourcePane', () => {
       detectedLanguage: 'english',
     })
 
-    expect(screen.getByText('English を検出')).toBeDefined()
+    expect(
+      screen.getByRole('combobox', { name: '原文の言語' }).textContent,
+    ).toBe('自動判定 (English)')
     await user.click(screen.getByRole('combobox', { name: '原文の言語' }))
     expect(
       screen
