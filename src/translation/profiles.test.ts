@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   createDefaultProfileState,
+  mergeParameters,
   normalizeBaseUrl,
   parseParametersJson,
+  parseSamplingFieldText,
+  splitParameters,
   validateProfileDraft,
 } from './profiles'
 
@@ -51,9 +54,9 @@ describe('Profiles', () => {
 
   it('parses parameters as a JSON object and treats empty text as no parameters', () => {
     expect(parseParametersJson('')).toEqual({ ok: true, value: {} })
-    expect(parseParametersJson('  {"temperature": 0.3}  ')).toEqual({
+    expect(parseParametersJson('  {"seed": 42}  ')).toEqual({
       ok: true,
-      value: { temperature: 0.3 },
+      value: { seed: 42 },
     })
   })
 
@@ -77,5 +80,61 @@ describe('Profiles', () => {
         key,
       })
     }
+  })
+
+  it('rejects sampling-field keys in the extra-parameters JSON', () => {
+    for (const key of ['temperature', 'top_p', 'top_k', 'repeat_penalty']) {
+      expect(parseParametersJson(`{"${key}": 1}`)).toEqual({
+        ok: false,
+        reason: 'field-key',
+        key,
+      })
+    }
+  })
+
+  it('splits parameters into numeric sampling fields and extra keys, and merges them back', () => {
+    const parameters = {
+      temperature: 0.7,
+      top_k: 20,
+      provider: { order: ['x'] },
+      seed: 42,
+    }
+    const { fields, extra } = splitParameters(parameters)
+    expect(fields).toEqual({ temperature: 0.7, top_k: 20 })
+    expect(extra).toEqual({ provider: { order: ['x'] }, seed: 42 })
+    expect(mergeParameters(fields, extra)).toEqual(parameters)
+  })
+
+  it('leaves a non-numeric value for a known key in the extra keys', () => {
+    const { fields, extra } = splitParameters({ temperature: 'hot' })
+    expect(fields).toEqual({})
+    expect(extra).toEqual({ temperature: 'hot' })
+  })
+
+  it('parses sampling field text, treating an empty field as unset', () => {
+    expect(parseSamplingFieldText('temperature', '')).toEqual({
+      ok: true,
+      value: undefined,
+    })
+    expect(parseSamplingFieldText('temperature', ' 0.7 ')).toEqual({
+      ok: true,
+      value: 0.7,
+    })
+    expect(parseSamplingFieldText('top_k', '20')).toEqual({
+      ok: true,
+      value: 20,
+    })
+    expect(parseSamplingFieldText('temperature', 'abc')).toEqual({
+      ok: false,
+      reason: 'not-number',
+    })
+    expect(parseSamplingFieldText('temperature', 'Infinity')).toEqual({
+      ok: false,
+      reason: 'not-number',
+    })
+    expect(parseSamplingFieldText('top_k', '1.5')).toEqual({
+      ok: false,
+      reason: 'not-integer',
+    })
   })
 })

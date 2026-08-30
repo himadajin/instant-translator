@@ -17,6 +17,77 @@ export type ProfileState = {
 // Request-body keys the app itself owns; profile parameters may not set them.
 export const RESERVED_PARAMETER_KEYS = ['messages', 'stream', 'model'] as const
 
+// Parameters edited as dedicated form fields; the extra-parameters JSON may
+// not set them so each key has exactly one place to be specified.
+export const SAMPLING_FIELD_KEYS = [
+  'temperature',
+  'top_p',
+  'top_k',
+  'repeat_penalty',
+] as const
+
+export type SamplingFieldKey = (typeof SAMPLING_FIELD_KEYS)[number]
+
+export type SamplingFields = Partial<Record<SamplingFieldKey, number>>
+
+export function splitParameters(parameters: Record<string, unknown>): {
+  fields: SamplingFields
+  extra: Record<string, unknown>
+} {
+  const fields: SamplingFields = {}
+  const extra: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(parameters)) {
+    if (isSamplingFieldKey(key) && typeof value === 'number') {
+      fields[key] = value
+    } else {
+      extra[key] = value
+    }
+  }
+  return { fields, extra }
+}
+
+export function mergeParameters(
+  fields: SamplingFields,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...extra }
+  for (const key of SAMPLING_FIELD_KEYS) {
+    const value = fields[key]
+    if (value !== undefined) {
+      merged[key] = value
+    }
+  }
+  return merged
+}
+
+function isSamplingFieldKey(key: string): key is SamplingFieldKey {
+  return (SAMPLING_FIELD_KEYS as readonly string[]).includes(key)
+}
+
+export type SamplingFieldParseResult =
+  | { ok: true; value: number | undefined }
+  | { ok: false; reason: 'not-number' | 'not-integer' }
+
+// An empty field means "do not send this parameter": the inference target's
+// own default applies.
+export function parseSamplingFieldText(
+  key: SamplingFieldKey,
+  text: string,
+): SamplingFieldParseResult {
+  const trimmed = text.trim()
+  if (trimmed === '') {
+    return { ok: true, value: undefined }
+  }
+  const value = Number(trimmed)
+  if (!Number.isFinite(value)) {
+    return { ok: false, reason: 'not-number' }
+  }
+  if (key === 'top_k' && !Number.isInteger(value)) {
+    return { ok: false, reason: 'not-integer' }
+  }
+  return { ok: true, value }
+}
+
 export function createProfileId(): string {
   return crypto.randomUUID()
 }
@@ -80,7 +151,7 @@ function isHttpUrl(value: string): boolean {
 export type ParametersParseResult =
   | { ok: true; value: Record<string, unknown> }
   | { ok: false; reason: 'invalid-json' | 'not-object' }
-  | { ok: false; reason: 'reserved-key'; key: string }
+  | { ok: false; reason: 'reserved-key' | 'field-key'; key: string }
 
 export function parseParametersJson(text: string): ParametersParseResult {
   const trimmed = text.trim()
@@ -102,6 +173,11 @@ export function parseParametersJson(text: string): ParametersParseResult {
   for (const key of RESERVED_PARAMETER_KEYS) {
     if (key in value) {
       return { ok: false, reason: 'reserved-key', key }
+    }
+  }
+  for (const key of SAMPLING_FIELD_KEYS) {
+    if (key in value) {
+      return { ok: false, reason: 'field-key', key }
     }
   }
   return { ok: true, value }

@@ -7,12 +7,21 @@ export {
   PROFILES_STORAGE_KEY,
   STORAGE_KEY,
 } from './constants'
-export { parseParametersJson, validateProfileDraft } from './profiles'
+export {
+  mergeParameters,
+  parseParametersJson,
+  parseSamplingFieldText,
+  SAMPLING_FIELD_KEYS,
+  splitParameters,
+  validateProfileDraft,
+} from './profiles'
 export type {
   ParametersParseResult,
   Profile,
   ProfileDraft,
   ProfileDraftErrors,
+  SamplingFieldKey,
+  SamplingFields,
 } from './profiles'
 export type {
   ConnectionStatus,

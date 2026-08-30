@@ -10,37 +10,68 @@ import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
-import { parseParametersJson, validateProfileDraft } from '../translation'
+import {
+  mergeParameters,
+  parseParametersJson,
+  parseSamplingFieldText,
+  SAMPLING_FIELD_KEYS,
+  splitParameters,
+  validateProfileDraft,
+} from '../translation'
+import type { SamplingFieldKey, SamplingFields } from '../translation'
 import type { Profile, ProfileDraft } from './types'
 
+type SamplingTexts = Record<SamplingFieldKey, string>
+
 type FormState = {
-  /** null while adding a new profile. */
+  /** null while adding a new profile (including a duplicate). */
   id: string | null
   name: string
   baseUrl: string
   apiKey: string
   model: string
-  parametersText: string
+  sampling: SamplingTexts
+  extraText: string
 }
 
 type FormErrors = {
   name?: string
   baseUrl?: string
-  parameters?: string
+  sampling?: Partial<Record<SamplingFieldKey, string>>
+  extra?: string
 }
 
-function formStateFor(profile: Profile | null): FormState {
-  if (profile === null) {
-    return {
-      id: null,
-      name: '',
-      baseUrl: '',
-      apiKey: '',
-      model: '',
-      parametersText: '',
+const EMPTY_SAMPLING: SamplingTexts = {
+  temperature: '',
+  top_p: '',
+  top_k: '',
+  repeat_penalty: '',
+}
+
+function emptyFormState(): FormState {
+  return {
+    id: null,
+    name: '',
+    baseUrl: '',
+    apiKey: '',
+    model: '',
+    sampling: EMPTY_SAMPLING,
+    extraText: '',
+  }
+}
+
+function formStateFor(profile: Profile): FormState {
+  const { fields, extra } = splitParameters(profile.parameters)
+  const sampling = { ...EMPTY_SAMPLING }
+  for (const key of SAMPLING_FIELD_KEYS) {
+    const value = fields[key]
+    if (value !== undefined) {
+      sampling[key] = String(value)
     }
   }
   return {
@@ -49,10 +80,17 @@ function formStateFor(profile: Profile | null): FormState {
     baseUrl: profile.baseUrl,
     apiKey: profile.apiKey,
     model: profile.model,
-    parametersText:
-      Object.keys(profile.parameters).length === 0
-        ? ''
-        : JSON.stringify(profile.parameters, null, 2),
+    sampling,
+    extraText:
+      Object.keys(extra).length === 0 ? '' : JSON.stringify(extra, null, 2),
+  }
+}
+
+function duplicateFormStateFor(profile: Profile): FormState {
+  return {
+    ...formStateFor(profile),
+    id: null,
+    name: `${profile.name} のコピー`,
   }
 }
 
@@ -71,15 +109,33 @@ function validate(form: FormState): {
     errors.baseUrl = 'http または https の URL を入力してください'
   }
 
-  const parameters = parseParametersJson(form.parametersText)
-  if (!parameters.ok) {
-    errors.parameters =
-      parameters.reason === 'reserved-key'
-        ? `パラメータに ${parameters.key} は指定できません`
-        : 'JSON オブジェクトとして解釈できません'
+  const fields: SamplingFields = {}
+  for (const key of SAMPLING_FIELD_KEYS) {
+    const result = parseSamplingFieldText(key, form.sampling[key])
+    if (!result.ok) {
+      errors.sampling = {
+        ...errors.sampling,
+        [key]:
+          result.reason === 'not-integer'
+            ? '整数を入力してください'
+            : '数値を入力してください',
+      }
+    } else if (result.value !== undefined) {
+      fields[key] = result.value
+    }
   }
 
-  if (errors.name || errors.baseUrl || !parameters.ok) {
+  const extra = parseParametersJson(form.extraText)
+  if (!extra.ok) {
+    errors.extra =
+      extra.reason === 'reserved-key'
+        ? `パラメータに ${extra.key} は指定できません`
+        : extra.reason === 'field-key'
+          ? `${extra.key} は上のフィールドで指定してください`
+          : 'JSON オブジェクトとして解釈できません'
+  }
+
+  if (errors.name || errors.baseUrl || errors.sampling || !extra.ok) {
     return { errors, draft: null }
   }
   return {
@@ -89,7 +145,7 @@ function validate(form: FormState): {
       baseUrl: form.baseUrl,
       apiKey: form.apiKey,
       model: form.model,
-      parameters: parameters.value,
+      parameters: mergeParameters(fields, extra.value),
     },
   }
 }
@@ -140,10 +196,22 @@ export function ProfileSettingsDialog({
   }
 
   const setField =
-    (field: keyof Omit<FormState, 'id'>) =>
+    (field: 'name' | 'baseUrl' | 'apiKey' | 'model' | 'extraText') =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setForm((current) =>
         current === null ? null : { ...current, [field]: event.target.value },
+      )
+    }
+
+  const setSamplingField =
+    (key: SamplingFieldKey) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setForm((current) =>
+        current === null
+          ? null
+          : {
+              ...current,
+              sampling: { ...current.sampling, [key]: event.target.value },
+            },
       )
     }
 
@@ -165,6 +233,12 @@ export function ProfileSettingsDialog({
                         onClick={() => setForm(formStateFor(profile))}
                       >
                         <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        aria-label={`${profile.name} を複製`}
+                        onClick={() => setForm(duplicateFormStateFor(profile))}
+                      >
+                        <ContentCopyIcon fontSize="small" />
                       </IconButton>
                       <IconButton
                         aria-label={`${profile.name} を削除`}
@@ -191,7 +265,7 @@ export function ProfileSettingsDialog({
           <DialogActions>
             <Button
               startIcon={<AddIcon />}
-              onClick={() => setForm(formStateFor(null))}
+              onClick={() => setForm(emptyFormState())}
               sx={{ mr: 'auto' }}
             >
               プロファイルを追加
@@ -234,16 +308,43 @@ export function ProfileSettingsDialog({
                 onChange={setField('model')}
                 helperText="空にすると model を送らない"
               />
+              <Stack spacing={1}>
+                <Typography variant="caption" color="text.secondary">
+                  サンプリングパラメータ。空欄は送信せず、推論先の既定に従う。
+                </Typography>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  useFlexGap
+                  sx={{ flexWrap: 'wrap' }}
+                >
+                  {SAMPLING_FIELD_KEYS.map((key) => (
+                    <TextField
+                      key={key}
+                      label={key}
+                      size="small"
+                      value={form.sampling[key]}
+                      onChange={setSamplingField(key)}
+                      error={errors.sampling?.[key] !== undefined}
+                      helperText={errors.sampling?.[key]}
+                      sx={{ width: 'calc(50% - 8px)' }}
+                      slotProps={{
+                        htmlInput: { inputMode: 'decimal' },
+                      }}
+                    />
+                  ))}
+                </Stack>
+              </Stack>
               <TextField
-                label="パラメータ (JSON)"
+                label="追加パラメータ (JSON)"
                 multiline
-                minRows={4}
-                value={form.parametersText}
-                onChange={setField('parametersText')}
-                error={errors.parameters !== undefined}
+                minRows={3}
+                value={form.extraText}
+                onChange={setField('extraText')}
+                error={errors.extra !== undefined}
                 helperText={
-                  errors.parameters ??
-                  'リクエストボディへそのまま含める。例: {"temperature": 0.7}'
+                  errors.extra ??
+                  'プロバイダ固有のパラメータをそのままリクエストへ含める'
                 }
                 slotProps={{
                   input: { sx: { fontFamily: 'monospace' } },
