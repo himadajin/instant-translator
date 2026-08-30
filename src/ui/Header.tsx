@@ -62,17 +62,29 @@ export function Header({
     <AppBar position="static" color="default" elevation={0}>
       <Container maxWidth="lg" disableGutters>
         <Toolbar>
-          <Typography variant="h6" component="h1" sx={{ fontWeight: 500 }}>
+          <Typography
+            variant="h6"
+            component="h1"
+            noWrap
+            sx={{ fontWeight: 500, display: { xs: 'none', sm: 'block' } }}
+          >
             Instant Translator
           </Typography>
           <Stack
             direction="row"
             spacing={3}
-            sx={{ alignItems: 'center', ml: 'auto' }}
+            sx={{ alignItems: 'center', ml: 'auto', minWidth: 0 }}
           >
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: 'center', minWidth: 0 }}
+            >
               {profiles.length > 0 && (
-                <FormControl size="small" sx={{ minWidth: 160 }}>
+                <FormControl
+                  size="small"
+                  sx={{ minWidth: { xs: 120, sm: 160 }, maxWidth: 240 }}
+                >
                   <Select
                     value={selectedProfileId}
                     inputProps={{ 'aria-label': 'プロファイル' }}
